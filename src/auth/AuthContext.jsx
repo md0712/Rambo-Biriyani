@@ -1,0 +1,135 @@
+import React, { createContext, useState, useEffect } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc, setDoc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '../firebase/config';
+import authService from './authService';
+import { USER_ROLES } from '../utils/constants';
+
+export const AuthContext = createContext(null);
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Listen to real-time Firebase Authentication state
+    let unsubscribeFirestore = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser) {
+        try {
+          const userToken = await fbUser.getIdToken();
+          setToken(userToken);
+
+          // Real-time listener for the user's Firestore profile
+          const userDocRef = doc(db, 'users', fbUser.uid);
+          unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+              const profile = docSnap.data();
+              setUser({ ...profile, uid: fbUser.uid });
+            } else {
+              // Fallback profile if Firestore doc hasn't been written yet
+              const isAdminEmail = fbUser.email?.toLowerCase() === 'admin@rambo.com';
+              setUser({
+                uid: fbUser.uid,
+                id: fbUser.uid,
+                name: fbUser.displayName || (isAdminEmail ? 'Alexander Stone' : 'Food Warrior'),
+                email: fbUser.email,
+                role: isAdminEmail ? USER_ROLES.ADMIN : USER_ROLES.CUSTOMER,
+                status: 'Active',
+                avatar: isAdminEmail
+                  ? 'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=150'
+                  : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+                phone: '+91 98765 00123',
+              });
+            }
+            setLoading(false);
+          }, (err) => {
+            console.warn('[AuthContext] Firestore profile listener warning:', err.message);
+            setLoading(false);
+          });
+        } catch (error) {
+          console.error('[AuthContext] Error retrieving Firebase token:', error);
+          setLoading(false);
+        }
+      } else {
+        if (unsubscribeFirestore) unsubscribeFirestore();
+        setUser(null);
+        setToken(null);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeFirestore) unsubscribeFirestore();
+    };
+  }, []);
+
+  const login = async (email, password) => {
+    setLoading(true);
+    try {
+      const data = await authService.login(email, password);
+      setUser(data.user);
+      setToken(data.token);
+      return data;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const register = async (name, email, password, phone) => {
+    setLoading(true);
+    try {
+      const data = await authService.register(name, email, password, phone);
+      setUser(data.user);
+      setToken(data.token);
+      return data;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    await authService.logout();
+    setUser(null);
+    setToken(null);
+  };
+
+  const updateProfile = async (updatedFields) => {
+    if (!user?.uid && !auth.currentUser?.uid) return;
+    const uid = user?.uid || auth.currentUser.uid;
+    const userDocRef = doc(db, 'users', uid);
+
+    await updateDoc(userDocRef, {
+      ...updatedFields,
+      updatedAt: serverTimestamp(),
+    });
+
+    setUser((prev) => ({ ...prev, ...updatedFields }));
+  };
+
+  const isAuthenticated = !!user;
+  const isAdmin = user && (user.role === USER_ROLES.ADMIN || user.role === USER_ROLES.MANAGER);
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        loading,
+        isAuthenticated,
+        isAdmin,
+        login,
+        register,
+        logout,
+        updateProfile,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export default AuthProvider;

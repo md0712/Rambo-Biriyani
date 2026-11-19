@@ -1,0 +1,184 @@
+@import './variables.css';
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  color-scheme: dark;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-dark-0);
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(225, 29, 36, 0.08) 0%, transparent 60%),
+    radial-gradient(circle at 100% 50%, rgba(245, 158, 11, 0.05) 0%, transparent 50%);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+img, svg {
+  display: block;
+  max-width: 100%;
+}
+
+ul, ol {
+  list-style: none;
+}
+
+/* Custom Fiery Scrollbar */
+::-webkit-scrollbar {
+  width: 9px;
+  height: 0px;
+}
+
+::-webkit-scrollbar-track {
+  background: #090505;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #391e1b;
+  border-radius: var(--radius-full);
+  border: 2px solid #090505;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--rambo-red);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+::selection {
+  background-color: var(--rambo-red);
+  color: #ffffff;
+}
+
+/* Typography Helpers */
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
+}
+
+.text-rambo-red {
+  color: var(--rambo-red-bright);
+}
+
+.text-spice-gold {
+  color: var(--spice-amber);
+}
+
+/* Container */
+.container {
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* Common Flex / Grid Helpers */
+.flex { display: flex; }
+.flex-col { display: flex; flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.gap-1 { gap: 0.25rem; }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 0.75rem; }
+.gap-4 { gap: 1rem; }
+.gap-6 { gap: 1.5rem; }
+
+/* Status Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-rambo {
+  background: var(--rambo-red);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(225, 29, 36, 0.4);
+}
+
+.badge-gold {
+  background: var(--spice-gold-bg);
+  color: var(--spice-amber);
+  border: 1px solid var(--border-gold);
+}
+
+.badge-success {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+}
+
+.badge-warning {
+  background: var(--warning-bg);
+  color: var(--warning);
+  border: 1px solid var(--warning-border);
+}
+
+.badge-danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid var(--danger-border);
+}
+
+/* Keyframes */
+@keyframes flamePulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 12px rgba(225, 29, 36, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 25px rgba(255, 42, 53, 0.8));
+  }
+}
+
+@keyframes steamRise {
+  0% { transform: translateY(0) scale(1); opacity: 0.6; }
+  50% { opacity: 0.9; }
+  100% { transform: translateY(-20px) scale(1.1); opacity: 0; }
+}
+
+.flame-glow {
+  animation: flamePulse 3s ease-in-out infinite;
+}

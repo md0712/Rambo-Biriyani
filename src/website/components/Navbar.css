@@ -1,0 +1,383 @@
+/* Rambo Biriyani Master Navbar Styles - Matching Reference Design */
+
+.rambo-navbar {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 74px;
+  z-index: 9999;
+  background: rgba(10, 5, 5, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  transition: all 0.25s ease;
+}
+
+.rambo-navbar.is-scrolled {
+  background: rgba(8, 4, 4, 0.98);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.95);
+}
+
+.rambo-navbar-inner {
+  width: 100%;
+  max-width: var(--max-width, 1280px);
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+/* Brand Logo - Bank Gothic Geometry */
+.rambo-navbar-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  user-select: none;
+  line-height: 1;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.rambo-navbar-brand:hover {
+  transform: scale(1.02);
+}
+
+.rambo-logo-text {
+  font-family: 'Michroma', sans-serif;
+  font-size: 1.55rem;
+  font-weight: 700;
+  font-style: normal;
+  letter-spacing: 0.08em;
+  color: #e51e25;
+  line-height: 1;
+}
+
+.rambo-logo-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.logo-biriyani-txt {
+  font-family: 'Michroma', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  font-style: normal;
+  letter-spacing: 0.26em;
+  color: #eab308;
+  text-transform: uppercase;
+}
+
+.logo-stripes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 14px;
+}
+
+.stripe-line {
+  height: 1.5px;
+  background: #eab308;
+  display: block;
+  border-radius: 1px;
+}
+
+.stripe-long {
+  width: 14px;
+}
+
+.stripe-short {
+  width: 9px;
+}
+
+.rambo-logo-sub .logo-stripes:last-child .stripe-short {
+  margin-left: auto;
+}
+
+/* Center Nav Links - Responsive Fit */
+.rambo-nav-links {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 1.8vw, 26px);
+  flex-wrap: nowrap;
+}
+
+.rambo-nav-item {
+  font-family: 'Plus Jakarta Sans', 'Montserrat', sans-serif;
+  font-size: clamp(0.85rem, 0.9vw, 0.925rem);
+  font-weight: 500;
+  color: #ffffff;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  padding: 6px clamp(8px, 1.1vw, 16px);
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.rambo-nav-item:hover {
+  color: #ffffff;
+  opacity: 1;
+}
+
+.rambo-nav-item:focus,
+.rambo-nav-item:focus-visible {
+  outline: none;
+}
+
+/* Active Pill - Solid clean red without lighting */
+.rambo-nav-item.is-active-pill {
+  background: #e11d24;
+  color: #ffffff;
+  font-weight: 600;
+  padding: 6px clamp(14px, 1.5vw, 20px);
+  border-radius: 9999px;
+  box-shadow: none;
+}
+
+/* Dropdown */
+.rambo-dropdown-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.rambo-dropdown-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.chevron-icon {
+  transition: transform 0.2s ease;
+}
+
+.chevron-icon.rotate {
+  transform: rotate(180deg);
+}
+
+.rambo-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 180px;
+  background: rgba(14, 7, 7, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(225, 29, 36, 0.35);
+  border-radius: 8px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.95), 0 0 15px rgba(225, 29, 36, 0.2);
+  padding: 6px 0;
+  z-index: 200;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.rambo-dropdown-link {
+  display: block;
+  padding: 8px 18px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #d1d5db;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.rambo-dropdown-link:hover {
+  background: #e11d24;
+  color: #ffffff;
+  padding-left: 22px;
+}
+
+/* Right Actions - Fit & Balance */
+.rambo-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 1.4vw, 20px);
+  flex-shrink: 0;
+}
+
+.rambo-icon-btn {
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  transition: transform 0.2s ease, opacity 0.2s ease, color 0.2s ease;
+  text-decoration: none;
+}
+
+.rambo-icon-btn:hover {
+  opacity: 0.85;
+  transform: scale(1.08);
+}
+
+.rambo-avatar-img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid #eab308;
+}
+
+/* Cart Icon with Red Counter Badge */
+.rambo-cart-btn {
+  position: relative;
+}
+
+.rambo-cart-counter {
+  position: absolute;
+  top: -4px;
+  right: -7px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #e11d24;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 8px rgba(225, 29, 36, 0.8);
+  line-height: 1;
+}
+
+/* Mobile Toggle */
+.rambo-mobile-toggle {
+  display: none;
+  color: #ffffff;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+}
+
+@media (max-width: 992px) {
+  .rambo-navbar {
+    height: 64px;
+    background: #090706;
+    border-bottom: 1px solid #33251B;
+    position: sticky;
+    top: 0;
+    z-index: 9999;
+  }
+
+  .rambo-navbar-inner {
+    padding: 0 16px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .rambo-navbar-brand {
+    align-items: flex-start;
+    flex-shrink: 0;
+  }
+
+  .rambo-logo-text {
+    font-size: 1.35rem;
+    color: #E51E25;
+  }
+
+  .logo-biriyani-txt {
+    font-size: 0.55rem;
+    color: #C5A16A;
+  }
+
+  .stripe-line {
+    background: #C5A16A;
+  }
+
+  .rambo-nav-links {
+    display: none;
+  }
+
+  .rambo-nav-links.mobile-show {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #171310;
+    padding: 20px 24px;
+    gap: 14px;
+    border-bottom: 2px solid #E51E25;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.95);
+  }
+
+  .rambo-nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-shrink: 0;
+  }
+
+  .rambo-icon-btn,
+  .rambo-mobile-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #FFFFFF;
+    padding: 4px;
+    cursor: pointer;
+  }
+
+  .rambo-cart-counter {
+    background: #E51E25;
+    box-shadow: 0 0 8px rgba(229, 30, 37, 0.8);
+  }
+}
+
+@media (max-width: 380px) {
+  .rambo-navbar-inner {
+    padding: 0 12px;
+  }
+
+  .rambo-logo-text {
+    font-size: 1.2rem;
+  }
+
+  .rambo-nav-actions {
+    gap: 10px;
+  }
+
+  .rambo-icon-btn svg,
+  .rambo-mobile-toggle svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@media (max-width: 330px) {
+  .rambo-navbar-inner {
+    padding: 0 8px;
+  }
+
+  .rambo-logo-text {
+    font-size: 1.1rem;
+  }
+
+  .rambo-nav-actions {
+    gap: 8px;
+  }
+}

@@ -1,0 +1,100 @@
+:root {
+  /* Brand Red War Palette */
+  --rambo-red: #e11d24;
+  --rambo-red-bright: #ff2a35;
+  --rambo-red-dark: #991b1b;
+  --rambo-red-glow: rgba(225, 29, 36, 0.45);
+
+  /* Spice Gold & Amber */
+  --spice-gold: #f59e0b;
+  --spice-amber: #fbbf24;
+  --spice-dark: #b45309;
+  --spice-gold-bg: rgba(245, 158, 11, 0.12);
+
+  /* Deep Smoky Charcoal & Blacks */
+  --bg-dark-0: #060404;
+  --bg-dark-1: #0a0707;
+  --bg-dark-2: #120b0a;
+  --bg-dark-3: #1a100f;
+  --bg-dark-card: #150e0d;
+  --bg-dark-hover: #241412;
+
+  /* Neutrals */
+  --bg-primary: #0a0707;
+  --bg-secondary: #120b0a;
+  --bg-tertiary: #1a100f;
+  --bg-hover: #241412;
+
+  --text-primary: #ffffff;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+  --text-gold: #fbbf24;
+  --text-inverse: #0a0707;
+
+  /* Borders */
+  --border-subtle: #291816;
+  --border-light: #381f1b;
+  --border-gold: rgba(245, 158, 11, 0.35);
+  --border-red: rgba(225, 29, 36, 0.4);
+
+  /* Gradients */
+  --gradient-rambo-red: linear-gradient(135deg, #ff2a35 0%, #e11d24 60%, #991b1b 100%);
+  --gradient-gold: linear-gradient(135deg, #fde047 0%, #f59e0b 50%, #b45309 100%);
+  --gradient-card: linear-gradient(180deg, rgba(26, 16, 15, 0.95) 0%, rgba(16, 10, 9, 0.95) 100%);
+  --gradient-fire: radial-gradient(circle at center, rgba(225, 29, 36, 0.25) 0%, transparent 70%);
+
+  /* Status Colors */
+  --success: #10b981;
+  --success-bg: rgba(16, 185, 129, 0.12);
+  --success-border: rgba(16, 185, 129, 0.3);
+  --warning: #f59e0b;
+  --warning-bg: rgba(245, 158, 11, 0.12);
+  --warning-border: rgba(245, 158, 11, 0.3);
+  --danger: #ef4444;
+  --danger-bg: rgba(239, 68, 68, 0.12);
+  --danger-border: rgba(239, 68, 68, 0.3);
+  --info: #38bdf8;
+  --info-bg: rgba(56, 189, 248, 0.12);
+  --info-border: rgba(56, 189, 248, 0.3);
+
+  /* Typography */
+  --font-brand: 'Michroma', sans-serif;
+  --font-display: 'Anton', 'Bebas Neue', 'Montserrat', Impact, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', 'Montserrat', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Border Radius */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.7);
+  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.85);
+  --shadow-fire: 0 0 30px rgba(225, 29, 36, 0.35);
+  --shadow-gold: 0 0 20px rgba(245, 158, 11, 0.3);
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 350ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Z-Index */
+  --z-base: 1;
+  --z-dropdown: 100;
+  --z-sticky: 500;
+  --z-modal-backdrop: 900;
+  --z-modal: 1000;
+  --z-toast: 1100;
+
+  /* Layout */
+  --max-width: 1280px;
+  --sidebar-width: 260px;
+  --header-height: 78px;
+  --topbar-height: 40px;
+}
