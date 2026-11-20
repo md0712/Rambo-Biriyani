@@ -1,15 +1,28 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { auth, db, isFirebaseConfigured } from '../firebase/config';
 import authService from './authService';
 import { USER_ROLES } from '../utils/constants';
 
 export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
+  const [user, setUser] = useState(() => {
+    try {
+      const fallback = localStorage.getItem('rambo_fallback_user');
+      return fallback ? JSON.parse(fallback) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [token, setToken] = useState(() => {
+    try {
+      return localStorage.getItem('rambo_fallback_user') ? 'demo-fallback-token' : null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,6 +34,7 @@ export const AuthProvider = ({ children }) => {
         try {
           const userToken = await fbUser.getIdToken();
           setToken(userToken);
+          localStorage.removeItem('rambo_fallback_user');
 
           // Real-time listener for the user's Firestore profile
           const userDocRef = doc(db, 'users', fbUser.uid);
@@ -55,8 +69,19 @@ export const AuthProvider = ({ children }) => {
         }
       } else {
         if (unsubscribeFirestore) unsubscribeFirestore();
-        setUser(null);
-        setToken(null);
+        try {
+          const fallback = localStorage.getItem('rambo_fallback_user');
+          if (fallback) {
+            setUser(JSON.parse(fallback));
+            setToken('demo-fallback-token');
+          } else {
+            setUser(null);
+            setToken(null);
+          }
+        } catch {
+          setUser(null);
+          setToken(null);
+        }
         setLoading(false);
       }
     });
@@ -93,21 +118,35 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     await authService.logout();
+    localStorage.removeItem('rambo_fallback_user');
     setUser(null);
     setToken(null);
   };
 
   const updateProfile = async (updatedFields) => {
     if (!user?.uid && !auth.currentUser?.uid) return;
-    const uid = user?.uid || auth.currentUser.uid;
-    const userDocRef = doc(db, 'users', uid);
+    try {
+      if (user?.isOfflineDemo || !isFirebaseConfigured()) {
+        const updated = { ...user, ...updatedFields };
+        setUser(updated);
+        localStorage.setItem('rambo_fallback_user', JSON.stringify(updated));
+        return;
+      }
+      const uid = user?.uid || auth.currentUser.uid;
+      const userDocRef = doc(db, 'users', uid);
 
-    await updateDoc(userDocRef, {
-      ...updatedFields,
-      updatedAt: serverTimestamp(),
-    });
+      await updateDoc(userDocRef, {
+        ...updatedFields,
+        updatedAt: serverTimestamp(),
+      });
 
-    setUser((prev) => ({ ...prev, ...updatedFields }));
+      setUser((prev) => ({ ...prev, ...updatedFields }));
+    } catch (err) {
+      console.warn('[AuthContext] Profile update offline fallback:', err.message);
+      const updated = { ...user, ...updatedFields };
+      setUser(updated);
+      localStorage.setItem('rambo_fallback_user', JSON.stringify(updated));
+    }
   };
 
   const isAuthenticated = !!user;

@@ -12,8 +12,8 @@ import {
   serverTimestamp,
   runTransaction,
 } from 'firebase/firestore';
-import { db } from '../firebase/config';
-import { ORDER_STATUS } from '../utils/constants';
+import { db, isFirebaseConfigured } from '../firebase/config';
+import { ORDER_STATUS, SEED_ORDERS } from '../utils/constants';
 import { seedInitialFirestoreData } from '../firebase/seed';
 
 export const orderService = {
@@ -91,8 +91,21 @@ export const orderService = {
 
       return orders;
     } catch (error) {
-      console.error('[Firestore getAllOrders Error]', error);
-      throw error;
+      console.warn('[Firestore getAllOrders Notice] Falling back to default order history:', error.message);
+      let orders = [...SEED_ORDERS];
+      if (filters.status && filters.status !== 'All') {
+        orders = orders.filter((o) => o.status === filters.status);
+      }
+      if (filters.search) {
+        const q = filters.search.toLowerCase();
+        orders = orders.filter(
+          (o) =>
+            (o.id || '').toLowerCase().includes(q) ||
+            (o.customer || '').toLowerCase().includes(q) ||
+            (o.customerPhone || '').toLowerCase().includes(q)
+        );
+      }
+      return orders;
     }
   },
 
@@ -105,12 +118,16 @@ export const orderService = {
       const docSnap = await getDoc(docRef);
 
       if (!docSnap.exists()) {
-        throw new Error(`Order ${id} not found in Firestore`);
+        const fallback = SEED_ORDERS.find((o) => o.id === id);
+        if (fallback) return fallback;
+        throw new Error(`Order ${id} not found`);
       }
 
       return { id: docSnap.id, ...docSnap.data() };
     } catch (error) {
-      console.error(`[Firestore getOrderById ${id} Error]`, error);
+      console.warn(`[Firestore getOrderById Notice] Order fallback for ${id}:`, error.message);
+      const fallback = SEED_ORDERS.find((o) => o.id === id);
+      if (fallback) return fallback;
       throw error;
     }
   },

@@ -17,6 +17,19 @@ const firebaseConfig = {
 // Initialize Firebase App
 export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
+// Helper to verify if real Firebase credentials have been configured
+export const isFirebaseConfigured = () => {
+  const key = import.meta.env.VITE_FIREBASE_API_KEY;
+  return Boolean(
+    key &&
+    typeof key === 'string' &&
+    key.trim().length > 15 &&
+    !key.includes('Dummy') &&
+    !key.includes('your_') &&
+    !key.includes('AIzaSyDemo')
+  );
+};
+
 // Initialize Firebase Services
 export const auth = getAuth(app);
 export const db = getFirestore(app);

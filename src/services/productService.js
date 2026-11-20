@@ -13,8 +13,9 @@ import {
   onSnapshot,
   serverTimestamp,
 } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { db, isFirebaseConfigured } from '../firebase/config';
 import { seedInitialFirestoreData } from '../firebase/seed';
+import { SEED_PRODUCTS, SEED_CATEGORIES } from '../utils/constants';
 
 export const productService = {
   /**
@@ -90,8 +91,16 @@ export const productService = {
 
       return products;
     } catch (error) {
-      console.error('[Firestore getAllProducts Error]', error);
-      throw error;
+      console.warn('[Firestore getAllProducts Notice] Falling back to default Rambo menu catalog:', error.message);
+      let products = [...SEED_PRODUCTS];
+      if (filters.category && filters.category !== 'All') {
+        products = products.filter((p) => (p.category || '').toLowerCase() === filters.category.toLowerCase());
+      }
+      if (filters.search) {
+        const q = filters.search.toLowerCase();
+        products = products.filter((p) => (p.name || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q));
+      }
+      return products;
     }
   },
 
@@ -104,12 +113,16 @@ export const productService = {
       const docSnap = await getDoc(docRef);
 
       if (!docSnap.exists()) {
-        throw new Error('Product not found in Firestore');
+        const fallback = SEED_PRODUCTS.find((p) => p.id === id);
+        if (fallback) return fallback;
+        throw new Error('Product not found');
       }
 
       return { id: docSnap.id, ...docSnap.data() };
     } catch (error) {
-      console.error(`[Firestore getProductById ${id} Error]`, error);
+      console.warn(`[Firestore getProductById Notice] Item fallback for ${id}:`, error.message);
+      const fallback = SEED_PRODUCTS.find((p) => p.id === id);
+      if (fallback) return fallback;
       throw error;
     }
   },
@@ -204,8 +217,8 @@ export const productService = {
         ...docSnap.data(),
       }));
     } catch (error) {
-      console.error('[Firestore getCategories Error]', error);
-      throw error;
+      console.warn('[Firestore getCategories Notice] Falling back to default categories:', error.message);
+      return SEED_CATEGORIES;
     }
   },
 

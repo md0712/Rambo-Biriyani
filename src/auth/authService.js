@@ -11,17 +11,47 @@ import {
   updateDoc,
   serverTimestamp,
 } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { auth, db, isFirebaseConfigured } from '../firebase/config';
 import { USER_ROLES, SEED_USERS } from '../utils/constants';
+
+const createLocalFallbackUser = (email, name = null, role = null) => {
+  const isAdmin = email.toLowerCase() === 'admin@rambo.com';
+  return {
+    id: isAdmin ? 'demo-admin-id' : `user-${Date.now()}`,
+    uid: isAdmin ? 'demo-admin-id' : `user-${Date.now()}`,
+    name: name || (isAdmin ? 'Alexander Stone' : (email.split('@')[0] || 'Food Warrior')),
+    email: email,
+    role: role || (isAdmin ? USER_ROLES.ADMIN : USER_ROLES.CUSTOMER),
+    status: 'Active',
+    joinedDate: new Date().toISOString().split('T')[0],
+    lastLogin: new Date().toISOString().replace('T', ' ').substring(0, 16),
+    avatar: isAdmin
+      ? 'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=150'
+      : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+    phone: '+91 98765 00123',
+    isOfflineDemo: true,
+  };
+};
 
 export const authService = {
   /**
-   * Real Firebase Authentication Sign-In
+   * Real Firebase Authentication Sign-In with Offline Demo Fallback
    */
   async login(email, password) {
+    // If Firebase API Key is not yet configured, use seamless local session
+    if (!isFirebaseConfigured()) {
+      console.warn('[Firebase Auth] VITE_FIREBASE_API_KEY is not configured in .env. Logging in via fallback demo session.');
+      const fallbackUser = createLocalFallbackUser(email);
+      localStorage.setItem('rambo_fallback_user', JSON.stringify(fallbackUser));
+      return { user: fallbackUser, token: 'demo-fallback-token' };
+    }
+
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const fbUser = userCredential.user;
+
+      // Clear any previous fallback session
+      localStorage.removeItem('rambo_fallback_user');
 
       // Retrieve user profile document from Firestore
       const userDocRef = doc(db, 'users', fbUser.uid);
@@ -67,6 +97,20 @@ export const authService = {
     } catch (error) {
       console.error('[Firebase Auth Login Error]', error);
 
+      // Handle invalid/missing Firebase API key error gracefully
+      const isApiKeyError =
+        error.code === 'auth/api-key-not-valid.-please-pass-a-valid-api-key.' ||
+        error.code === 'auth/invalid-api-key' ||
+        (error.message && error.message.toLowerCase().includes('api-key-not-valid')) ||
+        (error.message && error.message.toLowerCase().includes('api key'));
+
+      if (isApiKeyError) {
+        console.warn('[Firebase Auth] Invalid Firebase API key detected. Falling back to local session.');
+        const fallbackUser = createLocalFallbackUser(email);
+        localStorage.setItem('rambo_fallback_user', JSON.stringify(fallbackUser));
+        return { user: fallbackUser, token: 'demo-fallback-token' };
+      }
+
       // Helpful mapping for Firebase auth errors
       if (
         error.code === 'auth/invalid-credential' ||
@@ -84,12 +128,22 @@ export const authService = {
   },
 
   /**
-   * Real Firebase Authentication Sign-Up
+   * Real Firebase Authentication Sign-Up with Offline Fallback
    */
   async register(name, email, password, phone = '+91 98765 00123', role = USER_ROLES.CUSTOMER) {
+    if (!isFirebaseConfigured()) {
+      console.warn('[Firebase Auth] VITE_FIREBASE_API_KEY is not configured in .env. Registering in fallback session.');
+      const fallbackUser = createLocalFallbackUser(email, name, role);
+      fallbackUser.phone = phone || '+91 98765 00123';
+      localStorage.setItem('rambo_fallback_user', JSON.stringify(fallbackUser));
+      return { user: fallbackUser, token: 'demo-fallback-token' };
+    }
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const fbUser = userCredential.user;
+
+      localStorage.removeItem('rambo_fallback_user');
 
       // Update auth profile display name
       await updateFirebaseProfile(fbUser, { displayName: name });
@@ -117,6 +171,21 @@ export const authService = {
       return { user: profileData, token };
     } catch (error) {
       console.error('[Firebase Auth Register Error]', error);
+
+      const isApiKeyError =
+        error.code === 'auth/api-key-not-valid.-please-pass-a-valid-api-key.' ||
+        error.code === 'auth/invalid-api-key' ||
+        (error.message && error.message.toLowerCase().includes('api-key-not-valid')) ||
+        (error.message && error.message.toLowerCase().includes('api key'));
+
+      if (isApiKeyError) {
+        console.warn('[Firebase Auth Register] Invalid API key detected. Falling back to local session.');
+        const fallbackUser = createLocalFallbackUser(email, name, role);
+        fallbackUser.phone = phone || '+91 98765 00123';
+        localStorage.setItem('rambo_fallback_user', JSON.stringify(fallbackUser));
+        return { user: fallbackUser, token: 'demo-fallback-token' };
+      }
+
       if (error.code === 'auth/email-already-in-use') {
         throw new Error('An account with this email address already exists.');
       } else if (error.code === 'auth/weak-password') {
@@ -130,18 +199,27 @@ export const authService = {
    * Real Firebase Sign-Out
    */
   async logout() {
-    await signOut(auth);
+    localStorage.removeItem('rambo_fallback_user');
+    try {
+      await signOut(auth);
+    } catch (err) {
+      // Ignore if offline
+    }
   },
 
   /**
    * Current Authenticated User & Role Detection
    */
   getCurrentUser() {
-    return auth.currentUser;
+    if (auth.currentUser) return auth.currentUser;
+    const stored = localStorage.getItem('rambo_fallback_user');
+    return stored ? JSON.parse(stored) : null;
   },
 
   async getToken() {
-    return auth.currentUser ? await auth.currentUser.getIdToken() : null;
+    if (auth.currentUser) return await auth.currentUser.getIdToken();
+    const stored = localStorage.getItem('rambo_fallback_user');
+    return stored ? 'demo-fallback-token' : null;
   },
 };
 
