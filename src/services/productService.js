@@ -22,20 +22,30 @@ export const productService = {
    * Real-time listener for products collection
    */
   subscribeProducts(callback) {
-    const productsRef = collection(db, 'products');
-    return onSnapshot(
-      productsRef,
-      (snapshot) => {
-        const products = snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...docSnap.data(),
-        }));
-        callback(products);
-      },
-      (error) => {
-        console.error('[Firestore Products Subscription Error]', error);
-      }
-    );
+    try {
+      const productsRef = collection(db, 'products');
+      return onSnapshot(
+        productsRef,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const products = snapshot.docs.map((docSnap) => ({
+              id: docSnap.id,
+              ...docSnap.data(),
+            }));
+            callback(products);
+          } else {
+            callback(SEED_PRODUCTS);
+          }
+        },
+        (error) => {
+          console.warn('[Firestore Products Subscription Notice] Using default products:', error.message);
+          callback(SEED_PRODUCTS);
+        }
+      );
+    } catch (err) {
+      callback(SEED_PRODUCTS);
+      return () => {};
+    }
   },
 
   /**

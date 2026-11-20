@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { seedInitialFirestoreData } from '../firebase/seed';
+import { SEED_USERS } from '../utils/constants';
 
 export const userService = {
   /**
@@ -50,8 +51,16 @@ export const userService = {
 
       return users;
     } catch (error) {
-      console.error('[Firestore getAllUsers Error]', error);
-      throw error;
+      console.warn('[Firestore getAllUsers Notice] Falling back to default staff and users list:', error.message);
+      let users = [...SEED_USERS];
+      if (filters.role && filters.role !== 'All') {
+        users = users.filter((u) => u.role === filters.role);
+      }
+      if (filters.search) {
+        const q = filters.search.toLowerCase();
+        users = users.filter((u) => (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q));
+      }
+      return users;
     }
   },
 

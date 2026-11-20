@@ -126,10 +126,31 @@ export const Register = () => {
                 fontSize: '0.85rem',
                 fontWeight: 600,
                 marginBottom: '1.5rem',
+                flexWrap: 'wrap',
               }}
             >
               <AlertCircle size={18} style={{ flexShrink: 0 }} />
               <span>{regError}</span>
+              {regError.includes('already exists') && (
+                <Link
+                  to="/login"
+                  style={{
+                    marginLeft: 'auto',
+                    color: '#ffffff',
+                    background: '#e51e25',
+                    padding: '0.3rem 0.75rem',
+                    borderRadius: '6px',
+                    fontSize: '0.785rem',
+                    textDecoration: 'none',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                  }}
+                >
+                  Sign In &rarr;
+                </Link>
+              )}
             </div>
           )}
 

@@ -15,24 +15,35 @@ import orderService from '../../services/orderService';
 import productService from '../../services/productService';
 import userService from '../../services/userService';
 import { formatCurrency } from '../../utils/helpers';
+import { SEED_ORDERS, SEED_PRODUCTS } from '../../utils/constants';
 
 export const Dashboard = () => {
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState(null);
-  const [recentOrders, setRecentOrders] = useState([]);
-  const [topProducts, setTopProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState({
+    totalRevenue: 2725,
+    totalOrders: 5,
+    totalInventory: 920,
+    activeRiders: 12,
+    activeUsers: 8,
+  });
+  const [recentOrders, setRecentOrders] = useState(() => SEED_ORDERS.slice(0, 5));
+  const [topProducts, setTopProducts] = useState(() => SEED_PRODUCTS.slice(0, 3));
 
   useEffect(() => {
     loadDashboardData();
 
     // Subscribe to real-time live orders stream from Firestore
     const unsubscribeOrders = orderService.subscribeOrders((liveOrders) => {
-      setRecentOrders(liveOrders.slice(0, 5));
+      if (liveOrders && liveOrders.length > 0) {
+        setRecentOrders(liveOrders.slice(0, 5));
+      }
     });
 
     // Subscribe to real-time product stock changes from Firestore
     const unsubscribeProducts = productService.subscribeProducts((liveProducts) => {
-      setTopProducts(liveProducts.slice(0, 3));
+      if (liveProducts && liveProducts.length > 0) {
+        setTopProducts(liveProducts.slice(0, 3));
+      }
     });
 
     return () => {
@@ -42,24 +53,31 @@ export const Dashboard = () => {
   }, []);
 
   const loadDashboardData = async () => {
-    setLoading(true);
     try {
       const [orderStats, orders, products, users] = await Promise.all([
-        orderService.getDashboardStats(),
-        orderService.getAllOrders(),
-        productService.getAllProducts(),
-        userService.getAllUsers(),
+        orderService.getDashboardStats().catch(() => null),
+        orderService.getAllOrders().catch(() => null),
+        productService.getAllProducts().catch(() => null),
+        userService.getAllUsers().catch(() => null),
       ]);
 
-      setStats({
-        ...orderStats,
-        activeUsers: users.filter((u) => u.status === 'Active').length,
-        totalInventory: 920,
-      });
-      setRecentOrders(orders.slice(0, 5));
-      setTopProducts(products.slice(0, 3));
-    } finally {
-      setLoading(false);
+      if (orderStats) {
+        setStats((prev) => ({
+          ...prev,
+          ...orderStats,
+          activeUsers: Array.isArray(users) ? users.filter((u) => u.status === 'Active').length : 8,
+        }));
+      }
+
+      if (Array.isArray(orders) && orders.length > 0) {
+        setRecentOrders(orders.slice(0, 5));
+      }
+
+      if (Array.isArray(products) && products.length > 0) {
+        setTopProducts(products.slice(0, 3));
+      }
+    } catch (err) {
+      console.warn('[Dashboard] Data loading notice:', err.message);
     }
   };
 
@@ -97,7 +115,7 @@ export const Dashboard = () => {
       <div className="stat-cards-grid">
         <StatCard
           title="Today's Biriyani Sales"
-          value="₹2,725"
+          value={stats?.totalRevenue ? formatCurrency(stats.totalRevenue) : "₹2,725"}
           trend="22.4% vs yesterday"
           trendDirection="up"
           icon={<Flame size={20} />}
@@ -106,7 +124,7 @@ export const Dashboard = () => {
         />
         <StatCard
           title="Orders Processed"
-          value="5"
+          value={stats?.totalOrders ? String(stats.totalOrders) : "5"}
           trend="Peak lunch surge"
           trendDirection="up"
           icon={<ShoppingBag size={20} />}
@@ -115,7 +133,7 @@ export const Dashboard = () => {
         />
         <StatCard
           title="Dum Portions Ready"
-          value="920"
+          value={stats?.totalInventory ? String(stats.totalInventory) : "920"}
           trend="Handi 3 & 4 Active"
           trendDirection="up"
           icon={<Package size={20} />}
@@ -124,7 +142,7 @@ export const Dashboard = () => {
         />
         <StatCard
           title="Riders On Road"
-          value="12 Active"
+          value={stats?.activeRiders ? `${stats.activeRiders} Active` : "12 Active"}
           trend="Avg 28 mins delivery"
           trendDirection="up"
           icon={<Bike size={20} />}

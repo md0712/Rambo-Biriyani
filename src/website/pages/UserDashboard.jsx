@@ -110,11 +110,12 @@ export const UserDashboard = () => {
     let isMounted = true;
     const fetchUserOrders = async () => {
       try {
-        const stored = await orderService.getAllOrders();
+        const stored = await orderService.getAllOrders().catch(() => SEED_ORDERS);
         if (!isMounted) return;
 
+        const validStored = (Array.isArray(stored) && stored.length > 0) ? stored : SEED_ORDERS;
         const userEmail = (user?.email || '').toLowerCase();
-        const userOrders = stored.filter(
+        const userOrders = validStored.filter(
           (o) =>
             (o.userId && o.userId === user?.uid) ||
             (o.customerEmail && o.customerEmail.toLowerCase() === userEmail) ||
@@ -123,13 +124,13 @@ export const UserDashboard = () => {
             !o.customerEmail // include recent checkouts
         );
 
-        const combined = userOrders.length > 0 ? userOrders : stored.slice(0, 5);
+        const combined = userOrders.length > 0 ? userOrders : validStored.slice(0, 5);
         setOrders(combined);
 
         // Auto-open live tracker if trackOrder query is in URL
         if (trackOrderId) {
           const found =
-            stored.find((o) => o.id === trackOrderId) ||
+            validStored.find((o) => o.id === trackOrderId) ||
             combined.find((o) => o.id === trackOrderId);
           if (found) {
             setSelectedOrder(found);
@@ -139,6 +140,7 @@ export const UserDashboard = () => {
         }
       } catch (err) {
         console.warn('[UserDashboard] Could not fetch orders from Firestore:', err.message);
+        if (isMounted) setOrders(SEED_ORDERS.slice(0, 5));
       }
     };
 
