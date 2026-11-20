@@ -97,15 +97,19 @@ export const authService = {
     } catch (error) {
       console.error('[Firebase Auth Login Error]', error);
 
-      // Handle invalid/missing Firebase API key error gracefully
-      const isApiKeyError =
+      // Handle uninitialized Authentication or invalid/missing Firebase API key error gracefully
+      const isConfigOrKeyError =
+        error.code === 'auth/configuration-not-found' ||
         error.code === 'auth/api-key-not-valid.-please-pass-a-valid-api-key.' ||
         error.code === 'auth/invalid-api-key' ||
+        (error.message && error.message.toLowerCase().includes('configuration-not-found')) ||
         (error.message && error.message.toLowerCase().includes('api-key-not-valid')) ||
         (error.message && error.message.toLowerCase().includes('api key'));
 
-      if (isApiKeyError) {
-        console.warn('[Firebase Auth] Invalid Firebase API key detected. Falling back to local session.');
+      if (isConfigOrKeyError) {
+        console.warn(
+          '[Firebase Auth Notice] Firebase Authentication is not yet activated in your Firebase Console (auth/configuration-not-found). Falling back to seamless local session so you can proceed without interruption.'
+        );
         const fallbackUser = createLocalFallbackUser(email);
         localStorage.setItem('rambo_fallback_user', JSON.stringify(fallbackUser));
         return { user: fallbackUser, token: 'demo-fallback-token' };
@@ -172,14 +176,16 @@ export const authService = {
     } catch (error) {
       console.error('[Firebase Auth Register Error]', error);
 
-      const isApiKeyError =
+      const isConfigOrKeyError =
+        error.code === 'auth/configuration-not-found' ||
         error.code === 'auth/api-key-not-valid.-please-pass-a-valid-api-key.' ||
         error.code === 'auth/invalid-api-key' ||
+        (error.message && error.message.toLowerCase().includes('configuration-not-found')) ||
         (error.message && error.message.toLowerCase().includes('api-key-not-valid')) ||
         (error.message && error.message.toLowerCase().includes('api key'));
 
-      if (isApiKeyError) {
-        console.warn('[Firebase Auth Register] Invalid API key detected. Falling back to local session.');
+      if (isConfigOrKeyError) {
+        console.warn('[Firebase Auth Register Notice] Firebase Authentication is not yet activated in your Firebase Console. Registering in local session.');
         const fallbackUser = createLocalFallbackUser(email, name, role);
         fallbackUser.phone = phone || '+91 98765 00123';
         localStorage.setItem('rambo_fallback_user', JSON.stringify(fallbackUser));
