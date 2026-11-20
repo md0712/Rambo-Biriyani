@@ -3,15 +3,16 @@ import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
+import { getAnalytics, isSupported } from 'firebase/analytics';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyDemoDummyApiKeyForConfigVerification',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'rambo-biriyani.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'rambo-biriyani',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'rambo-biriyani.appspot.com',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '123456789012',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:123456789012:web:abcdef1234567890',
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || 'G-XXXXXXXXXX',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyCqObyKt6TbYcGhtqG-BwhnkLJT3yVM3Ak',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'rambo-biriyani-654c6.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'rambo-biriyani-654c6',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'rambo-biriyani-654c6.firebasestorage.app',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '991920876627',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:991920876627:web:1f78d1c6e36893ae99eaa6',
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || 'G-HFVCCCTK8X',
 };
 
 // Initialize Firebase App
@@ -19,7 +20,7 @@ export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfi
 
 // Helper to verify if real Firebase credentials have been configured
 export const isFirebaseConfigured = () => {
-  const key = import.meta.env.VITE_FIREBASE_API_KEY;
+  const key = import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey;
   return Boolean(
     key &&
     typeof key === 'string' &&
@@ -35,6 +36,16 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 export const functions = getFunctions(app);
+
+// Initialize Firebase Analytics (Browser only)
+export let analytics = null;
+if (typeof window !== 'undefined') {
+  isSupported()
+    .then((yes) => {
+      if (yes) analytics = getAnalytics(app);
+    })
+    .catch(() => {});
+}
 
 // Optional: Connect to local emulators if configured in environment
 if (import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true') {
