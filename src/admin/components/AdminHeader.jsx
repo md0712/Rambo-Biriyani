@@ -65,12 +65,21 @@ export const AdminHeader = ({ onToggleSidebar, theme = 'white', onToggleTheme })
         {/* Theme Toggle Button */}
         <button
           onClick={onToggleTheme}
-          title={`Switch to ${theme === 'white' ? 'Dark' : 'White'} Theme`}
+          title={`Switch to ${theme === 'white' ? 'Dark Mode' : 'White Theme'}`}
           className="header-theme-toggle-btn"
           type="button"
         >
-          {theme === 'white' ? <Moon size={15} /> : <Sun size={15} />}
-          <span>{theme === 'white' ? 'White Theme' : 'Dark Theme'}</span>
+          {theme === 'white' ? (
+            <>
+              <Moon size={15} />
+              <span>Dark Mode</span>
+            </>
+          ) : (
+            <>
+              <Sun size={15} />
+              <span>White Theme</span>
+            </>
+          )}
         </button>
 
         {/* Notification Bell with Dropdown */}

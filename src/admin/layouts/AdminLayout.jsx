@@ -12,6 +12,7 @@ export const AdminLayout = () => {
 
   useEffect(() => {
     localStorage.setItem('rambo_admin_theme', theme);
+    document.documentElement.setAttribute('data-admin-theme', theme);
   }, [theme]);
 
   const toggleTheme = () => {
