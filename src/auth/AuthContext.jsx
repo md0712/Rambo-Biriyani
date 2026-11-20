@@ -36,33 +36,42 @@ export const AuthProvider = ({ children }) => {
           setToken(userToken);
           localStorage.removeItem('rambo_fallback_user');
 
-          // Real-time listener for the user's Firestore profile
-          const userDocRef = doc(db, 'users', fbUser.uid);
-          unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-              const profile = docSnap.data();
-              setUser({ ...profile, uid: fbUser.uid });
-            } else {
-              // Fallback profile if Firestore doc hasn't been written yet
-              const isAdminEmail = fbUser.email?.toLowerCase() === 'admin@rambo.com';
-              setUser({
-                uid: fbUser.uid,
-                id: fbUser.uid,
-                name: fbUser.displayName || (isAdminEmail ? 'Alexander Stone' : 'Food Warrior'),
-                email: fbUser.email,
-                role: isAdminEmail ? USER_ROLES.ADMIN : USER_ROLES.CUSTOMER,
-                status: 'Active',
-                avatar: isAdminEmail
-                  ? 'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=150'
-                  : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-                phone: '+91 98765 00123',
-              });
-            }
-            setLoading(false);
-          }, (err) => {
-            console.warn('[AuthContext] Firestore profile listener warning:', err.message);
-            setLoading(false);
-          });
+          // Immediately populate authenticated user to unblock routing in 0ms
+          const isAdminEmail = fbUser.email?.toLowerCase() === 'admin@rambo.com';
+          const immediateProfile = {
+            uid: fbUser.uid,
+            id: fbUser.uid,
+            name: fbUser.displayName || (isAdminEmail ? 'Alexander Stone' : (fbUser.email?.split('@')[0] || 'Food Warrior')),
+            email: fbUser.email,
+            role: isAdminEmail ? USER_ROLES.ADMIN : USER_ROLES.CUSTOMER,
+            status: 'Active',
+            avatar: isAdminEmail
+              ? 'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=150'
+              : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+            phone: '+91 98765 00123',
+          };
+
+          setUser((prev) => (prev && prev.uid === fbUser.uid ? { ...immediateProfile, ...prev } : immediateProfile));
+          setLoading(false);
+
+          // Background listener for any custom profile changes in Firestore
+          try {
+            const userDocRef = doc(db, 'users', fbUser.uid);
+            unsubscribeFirestore = onSnapshot(
+              userDocRef,
+              (docSnap) => {
+                if (docSnap.exists()) {
+                  const profile = docSnap.data();
+                  setUser((prev) => ({ ...prev, ...profile, uid: fbUser.uid }));
+                }
+              },
+              (err) => {
+                console.warn('[AuthContext] Background Firestore sync notice:', err.message);
+              }
+            );
+          } catch (listenErr) {
+            console.warn('[AuthContext] Listener attach notice:', listenErr.message);
+          }
         } catch (error) {
           console.error('[AuthContext] Error retrieving Firebase token:', error);
           setLoading(false);
