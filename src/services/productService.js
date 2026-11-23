@@ -4,27 +4,55 @@ import {
   getDocs,
   getDoc,
   setDoc,
-  addDoc,
   updateDoc,
   deleteDoc,
-  query,
-  where,
-  orderBy,
   onSnapshot,
   serverTimestamp,
 } from 'firebase/firestore';
-import { db, isFirebaseConfigured } from '../firebase/config';
-import { seedInitialFirestoreData } from '../firebase/seed';
+import { db } from '../firebase/config';
 import { SEED_PRODUCTS, SEED_CATEGORIES } from '../utils/constants';
+
+// Helper to prevent any Firestore call from hanging indefinitely
+const withTimeout = (promise, ms = 3000) => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Firestore request timed out')), ms)
+    ),
+  ]);
+};
+
+// Local storage caching for zero-delay operations
+const getLocalProducts = () => {
+  try {
+    const raw = localStorage.getItem('rambo_products');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveLocalProducts = (products) => {
+  try {
+    localStorage.setItem('rambo_products', JSON.stringify(products));
+    window.dispatchEvent(new Event('rambo_products_updated'));
+  } catch (e) {
+    console.warn('[LocalStorage] Products save warning:', e);
+  }
+};
 
 export const productService = {
   /**
-   * Real-time listener for products collection
+   * Real-time listener for products collection with immediate local cache response
    */
   subscribeProducts(callback) {
+    // 1. Immediately provide cached products so UI is instantly loaded
+    const initial = getLocalProducts();
+    callback(initial);
+
     try {
       const productsRef = collection(db, 'products');
-      return onSnapshot(
+      const unsubscribe = onSnapshot(
         productsRef,
         (snapshot) => {
           if (!snapshot.empty) {
@@ -32,171 +60,212 @@ export const productService = {
               id: docSnap.id,
               ...docSnap.data(),
             }));
+            saveLocalProducts(products);
             callback(products);
           } else {
-            callback(SEED_PRODUCTS);
+            callback(getLocalProducts());
           }
         },
         (error) => {
-          console.warn('[Firestore Products Subscription Notice] Using default products:', error.message);
-          callback(SEED_PRODUCTS);
+          console.warn('[Firestore Products Subscription Notice] Using local cache:', error.message);
+          callback(getLocalProducts());
         }
       );
+
+      // Listen to local updates when running offline / before Firestore creation
+      const handleLocalUpdate = () => {
+        callback(getLocalProducts());
+      };
+      window.addEventListener('rambo_products_updated', handleLocalUpdate);
+
+      return () => {
+        if (unsubscribe) unsubscribe();
+        window.removeEventListener('rambo_products_updated', handleLocalUpdate);
+      };
     } catch (err) {
-      callback(SEED_PRODUCTS);
+      callback(getLocalProducts());
       return () => {};
     }
   },
 
   /**
-   * Fetch all products from Firestore with optional filtering
+   * Fetch all products from Firestore with optional filtering (with timeout safeguard)
    */
   async getAllProducts(filters = {}) {
+    let products = getLocalProducts();
+
     try {
       const productsRef = collection(db, 'products');
-      let snapshot = await getDocs(productsRef);
+      const snapshot = await withTimeout(getDocs(productsRef), 2500);
 
-      let products = snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-      }));
-
-      // In-memory or client-side filtering for search & categories
-      if (filters.category && filters.category !== 'All') {
-        products = products.filter(
-          (p) => (p.category || '').toLowerCase() === filters.category.toLowerCase()
-        );
+      if (!snapshot.empty) {
+        products = snapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
+        }));
+        saveLocalProducts(products);
       }
-
-      if (filters.search) {
-        const q = filters.search.toLowerCase();
-        products = products.filter(
-          (p) =>
-            (p.name || '').toLowerCase().includes(q) ||
-            (p.description || '').toLowerCase().includes(q) ||
-            (p.sku || '').toLowerCase().includes(q)
-        );
-      }
-
-      if (filters.vegOnly) {
-        products = products.filter((p) => {
-          const cat = (p.category || '').toLowerCase();
-          const name = (p.name || '').toLowerCase();
-          return (
-            cat === 'desserts' ||
-            cat === 'beverages' ||
-            name.includes('veg') ||
-            name.includes('paneer') ||
-            name.includes('gobi') ||
-            name.includes('kushka')
-          );
-        });
-      }
-
-      return products;
     } catch (error) {
-      console.warn('[Firestore getAllProducts Notice] Falling back to default Rambo menu catalog:', error.message);
-      let products = [...SEED_PRODUCTS];
-      if (filters.category && filters.category !== 'All') {
-        products = products.filter((p) => (p.category || '').toLowerCase() === filters.category.toLowerCase());
-      }
-      if (filters.search) {
-        const q = filters.search.toLowerCase();
-        products = products.filter((p) => (p.name || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q));
-      }
-      return products;
+      console.warn('[Firestore getAllProducts Notice] Returning local products:', error.message);
+      products = getLocalProducts();
     }
+
+    // In-memory / client-side filtering for search & categories
+    if (filters.category && filters.category !== 'All') {
+      products = products.filter(
+        (p) => (p.category || '').toLowerCase() === filters.category.toLowerCase()
+      );
+    }
+
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      products = products.filter(
+        (p) =>
+          (p.name || '').toLowerCase().includes(q) ||
+          (p.description || '').toLowerCase().includes(q) ||
+          (p.sku || '').toLowerCase().includes(q)
+      );
+    }
+
+    if (filters.vegOnly) {
+      products = products.filter((p) => {
+        const cat = (p.category || '').toLowerCase();
+        const name = (p.name || '').toLowerCase();
+        return (
+          cat === 'desserts' ||
+          cat === 'beverages' ||
+          name.includes('veg') ||
+          name.includes('paneer') ||
+          name.includes('gobi') ||
+          name.includes('kushka')
+        );
+      });
+    }
+
+    return products;
   },
 
   /**
    * Fetch a single product by ID
    */
   async getProductById(id) {
+    const local = getLocalProducts().find((p) => p.id === id);
+    if (local) return local;
+
     try {
       const docRef = doc(db, 'products', id);
-      const docSnap = await getDoc(docRef);
+      const docSnap = await withTimeout(getDoc(docRef), 2500);
 
       if (!docSnap.exists()) {
-        const fallback = SEED_PRODUCTS.find((p) => p.id === id);
-        if (fallback) return fallback;
         throw new Error('Product not found');
       }
 
       return { id: docSnap.id, ...docSnap.data() };
     } catch (error) {
       console.warn(`[Firestore getProductById Notice] Item fallback for ${id}:`, error.message);
-      const fallback = SEED_PRODUCTS.find((p) => p.id === id);
-      if (fallback) return fallback;
+      if (local) return local;
       throw error;
     }
   },
 
   /**
-   * Create a new product in Firestore
+   * Create a new product in Firestore & LocalStorage (instant response)
    */
   async createProduct(productData) {
+    const generatedId = `prd-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    const productsRef = collection(db, 'products');
+    const docRef = doc(productsRef, generatedId);
+
+    const payload = {
+      ...productData,
+      id: generatedId,
+      price: Number(productData.price) || 0,
+      originalPrice: Number(productData.originalPrice) || 0,
+      stock: Number(productData.stock) || 0,
+      rating: 4.8,
+      reviewsCount: 1,
+      status: Number(productData.stock) <= 0 ? 'Sold Out' : Number(productData.stock) <= 15 ? 'Low Stock' : 'In Stock',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // 1. Immediately save into local storage for zero-lag UI feedback
+    const existing = getLocalProducts();
+    const updated = [payload, ...existing.filter((p) => p.id !== payload.id)];
+    saveLocalProducts(updated);
+
+    // 2. Persist to Firestore in the background or within safe timeout
     try {
-      const productsRef = collection(db, 'products');
-      const docRef = doc(productsRef);
-
-      const payload = {
-        ...productData,
-        id: docRef.id,
-        price: Number(productData.price) || 0,
-        originalPrice: Number(productData.originalPrice) || 0,
-        stock: Number(productData.stock) || 0,
-        rating: 4.8,
-        reviewsCount: 1,
-        status: Number(productData.stock) <= 0 ? 'Sold Out' : Number(productData.stock) <= 15 ? 'Low Stock' : 'In Stock',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
-
-      await setDoc(docRef, payload);
-      return payload;
+      await withTimeout(
+        setDoc(docRef, {
+          ...payload,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }),
+        3000
+      );
     } catch (error) {
-      console.error('[Firestore createProduct Error]', error);
-      throw error;
+      console.warn('[Firestore createProduct Notice] Saved locally; cloud sync pending:', error.message);
     }
+
+    return payload;
   },
 
   /**
-   * Update an existing product in Firestore
+   * Update an existing product in Firestore & LocalStorage
    */
   async updateProduct(id, productData) {
+    const existing = getLocalProducts();
+    const targetIndex = existing.findIndex((p) => p.id === id);
+
+    const updates = {
+      ...productData,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (productData.price !== undefined) updates.price = Number(productData.price);
+    if (productData.stock !== undefined) {
+      updates.stock = Number(productData.stock);
+      updates.status = updates.stock <= 0 ? 'Sold Out' : updates.stock <= 15 ? 'Low Stock' : 'In Stock';
+    }
+
+    if (targetIndex >= 0) {
+      existing[targetIndex] = { ...existing[targetIndex], ...updates };
+      saveLocalProducts([...existing]);
+    }
+
     try {
       const docRef = doc(db, 'products', id);
-      const updates = {
-        ...productData,
-        updatedAt: serverTimestamp(),
-      };
-
-      if (productData.price !== undefined) updates.price = Number(productData.price);
-      if (productData.stock !== undefined) {
-        updates.stock = Number(productData.stock);
-        updates.status = updates.stock <= 0 ? 'Sold Out' : updates.stock <= 15 ? 'Low Stock' : 'In Stock';
-      }
-
-      await updateDoc(docRef, updates);
-      return { id, ...updates };
+      await withTimeout(
+        updateDoc(docRef, {
+          ...updates,
+          updatedAt: serverTimestamp(),
+        }),
+        3000
+      );
     } catch (error) {
-      console.error(`[Firestore updateProduct ${id} Error]`, error);
-      throw error;
+      console.warn(`[Firestore updateProduct ${id} Notice] Saved locally:`, error.message);
     }
+
+    return { id, ...updates };
   },
 
   /**
-   * Delete a product from Firestore
+   * Delete a product from Firestore & LocalStorage
    */
   async deleteProduct(id) {
+    const existing = getLocalProducts();
+    const filtered = existing.filter((p) => p.id !== id);
+    saveLocalProducts(filtered);
+
     try {
       const docRef = doc(db, 'products', id);
-      await deleteDoc(docRef);
-      return true;
+      await withTimeout(deleteDoc(docRef), 3000);
     } catch (error) {
-      console.error(`[Firestore deleteProduct ${id} Error]`, error);
-      throw error;
+      console.warn(`[Firestore deleteProduct ${id} Notice] Removed locally:`, error.message);
     }
+
+    return true;
   },
 
   /**
@@ -205,14 +274,17 @@ export const productService = {
   async getCategories() {
     try {
       const categoriesRef = collection(db, 'categories');
-      const snapshot = await getDocs(categoriesRef);
+      const snapshot = await withTimeout(getDocs(categoriesRef), 2500);
 
-      return snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-      }));
+      if (!snapshot.empty) {
+        return snapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
+        }));
+      }
+      return SEED_CATEGORIES;
     } catch (error) {
-      console.warn('[Firestore getCategories Notice] Falling back to default categories:', error.message);
+      console.warn('[Firestore getCategories Notice] Falling back to categories:', error.message);
       return SEED_CATEGORIES;
     }
   },
@@ -230,7 +302,7 @@ export const productService = {
         description: catData.description || '',
         createdAt: serverTimestamp(),
       };
-      await setDoc(docRef, payload);
+      await withTimeout(setDoc(docRef, payload), 3000);
       return payload;
     } catch (error) {
       console.error('[Firestore createCategory Error]', error);
@@ -243,7 +315,7 @@ export const productService = {
    */
   async deleteCategory(id) {
     try {
-      await deleteDoc(doc(db, 'categories', id));
+      await withTimeout(deleteDoc(doc(db, 'categories', id)), 3000);
       return true;
     } catch (error) {
       console.error(`[Firestore deleteCategory ${id} Error]`, error);

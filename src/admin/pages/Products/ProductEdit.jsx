@@ -119,14 +119,14 @@ export const ProductEdit = () => {
             />
 
             <Input
-              label="Price ($)"
+              label="Price (₹)"
               name="price"
               type="number"
-              step="0.01"
+              step="1"
               required
               value={formData.price}
               onChange={handleChange}
-              leftIcon={<DollarSign size={16} />}
+              leftIcon={<span style={{ fontWeight: 700, fontSize: '0.9rem' }}>₹</span>}
             />
 
             <Input
@@ -140,13 +140,13 @@ export const ProductEdit = () => {
           </div>
 
           <Input
-            label="Original Price ($)"
+            label="Original Price (₹)"
             name="originalPrice"
             type="number"
-            step="0.01"
+            step="1"
             value={formData.originalPrice}
             onChange={handleChange}
-            leftIcon={<DollarSign size={16} />}
+            leftIcon={<span style={{ fontWeight: 700, fontSize: '0.9rem' }}>₹</span>}
           />
 
           <Input

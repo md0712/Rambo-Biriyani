@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Save, Package, DollarSign, Image, Tag, Hash } from 'lucide-react';
+import { ArrowLeft, Save, Package, Image, Hash } from 'lucide-react';
 import SEO from '../../../components/shared/SEO';
 import Button from '../../../components/common/Button';
 import Input from '../../../components/common/Input';
@@ -13,16 +13,17 @@ export const ProductCreate = () => {
   const [formData, setFormData] = useState({
     name: '',
     sku: `RMB-PRD-${Math.floor(100 + Math.random() * 900)}`,
-    category: PRODUCT_CATEGORIES[0],
+    category: PRODUCT_CATEGORIES[0] || 'Biriyanis',
     price: '',
     originalPrice: '',
     stock: '',
-    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600',
+    image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600',
     description: '',
     featured: false,
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const handleChange = (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -34,6 +35,7 @@ export const ProductCreate = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitError('');
     const newErrors = {};
 
     const nameErr = validateRequired(formData.name, 'Product name');
@@ -57,6 +59,9 @@ export const ProductCreate = () => {
     try {
       await productService.createProduct(formData);
       navigate('/admin/products');
+    } catch (err) {
+      console.error('[ProductCreate Submit Error]', err);
+      setSubmitError(err.message || 'Failed to save product. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -77,12 +82,18 @@ export const ProductCreate = () => {
       </div>
 
       <div style={{ maxWidth: '750px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-xl)', padding: '2rem', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+        {submitError && (
+          <div style={{ padding: '0.85rem 1rem', background: 'var(--danger-bg)', color: 'var(--danger)', borderRadius: 'var(--radius-md)', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
+            {submitError}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
             <Input
               label="Product Title"
               name="name"
-              placeholder="e.g. Apex Pro Smart Watch"
+              placeholder="e.g. Chicken Dum Biriyani (Single)"
               required
               value={formData.name}
               onChange={handleChange}
@@ -111,16 +122,16 @@ export const ProductCreate = () => {
             />
 
             <Input
-              label="Selling Price ($)"
+              label="Selling Price (₹)"
               name="price"
               type="number"
-              step="0.01"
-              placeholder="199.99"
+              step="1"
+              placeholder="220"
               required
               value={formData.price}
               onChange={handleChange}
               error={errors.price}
-              leftIcon={<DollarSign size={16} />}
+              leftIcon={<span style={{ fontWeight: 700, fontSize: '0.9rem' }}>₹</span>}
             />
 
             <Input
@@ -136,15 +147,15 @@ export const ProductCreate = () => {
           </div>
 
           <Input
-            label="Original / Compare Price ($)"
+            label="Original / Compare Price (₹)"
             name="originalPrice"
             type="number"
-            step="0.01"
-            placeholder="249.99"
+            step="1"
+            placeholder="250"
             value={formData.originalPrice}
             onChange={handleChange}
             helperText="Optional: used to display discount badges on the storefront."
-            leftIcon={<DollarSign size={16} />}
+            leftIcon={<span style={{ fontWeight: 700, fontSize: '0.9rem' }}>₹</span>}
           />
 
           <Input
@@ -161,7 +172,7 @@ export const ProductCreate = () => {
             label="Product Description"
             name="description"
             rows={4}
-            placeholder="Detailed features, materials, and warranty information..."
+            placeholder="Aromatic spices, slow-cooked firewood dum..."
             value={formData.description}
             onChange={handleChange}
           />
