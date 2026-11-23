@@ -107,3 +107,37 @@ export const copyToClipboard = async (text) => {
 export const getWhatsAppOrderLink = (phone = '919876543210', message = 'Hi Rambo Biriyani, I would like to place an order!') => {
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 };
+
+/**
+ * Compress an image file to a lightweight data URL for fast device upload
+ */
+export const compressImage = (file, maxWidth = 800, quality = 0.8) => {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith('image/')) {
+      return reject(new Error('Selected file is not an image'));
+    }
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
+

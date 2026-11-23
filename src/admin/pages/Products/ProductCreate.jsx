@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Save, Package, Image, Hash } from 'lucide-react';
+import { ArrowLeft, Save, Package, Image, Hash, Upload, X } from 'lucide-react';
 import SEO from '../../../components/shared/SEO';
 import Button from '../../../components/common/Button';
 import Input from '../../../components/common/Input';
 import productService from '../../../services/productService';
+import storageService from '../../../services/storageService';
 import { PRODUCT_CATEGORIES } from '../../../utils/constants';
 import { validateRequired, validateNumber } from '../../../utils/validators';
+import { compressImage } from '../../../utils/helpers';
 
 export const ProductCreate = () => {
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
+
   const [formData, setFormData] = useState({
     name: '',
     sku: `RMB-PRD-${Math.floor(100 + Math.random() * 900)}`,
@@ -17,12 +21,14 @@ export const ProductCreate = () => {
     price: '',
     originalPrice: '',
     stock: '',
-    image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600',
+    image: '',
     description: '',
     featured: false,
   });
+
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
   const handleChange = (e) => {
@@ -30,6 +36,35 @@ export const ProductCreate = () => {
     setFormData({ ...formData, [e.target.name]: value });
     if (errors[e.target.name]) {
       setErrors({ ...errors, [e.target.name]: null });
+    }
+  };
+
+  const handleImageFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImageUploading(true);
+    try {
+      // 1. Immediately read and compress photo from local device
+      const compressedDataUrl = await compressImage(file, 800, 0.82);
+      setFormData((prev) => ({ ...prev, image: compressedDataUrl }));
+
+      // 2. Background upload to Firebase Storage if available
+      storageService
+        .uploadImage(file, 'products')
+        .then((downloadUrl) => {
+          if (downloadUrl) {
+            setFormData((prev) => ({ ...prev, image: downloadUrl }));
+          }
+        })
+        .catch((err) => {
+          console.warn('[Firebase Storage upload Notice] Retaining local device image:', err.message);
+        });
+    } catch (err) {
+      console.error('[Device Photo Error]', err);
+      alert('Could not load that image file. Please choose a JPG, PNG, or WEBP photo.');
+    } finally {
+      setImageUploading(false);
     }
   };
 
@@ -57,7 +92,11 @@ export const ProductCreate = () => {
 
     setLoading(true);
     try {
-      await productService.createProduct(formData);
+      const finalImage = formData.image || 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600';
+      await productService.createProduct({
+        ...formData,
+        image: finalImage,
+      });
       navigate('/admin/products');
     } catch (err) {
       console.error('[ProductCreate Submit Error]', err);
@@ -93,7 +132,7 @@ export const ProductCreate = () => {
             <Input
               label="Product Title"
               name="name"
-              placeholder="e.g. Chicken Dum Biriyani (Single)"
+              placeholder="e.g. Special Dum Chicken Biriyani"
               required
               value={formData.name}
               onChange={handleChange}
@@ -158,14 +197,96 @@ export const ProductCreate = () => {
             leftIcon={<span style={{ fontWeight: 700, fontSize: '0.9rem' }}>₹</span>}
           />
 
-          <Input
-            label="Primary Image URL"
-            name="image"
-            placeholder="https://images.unsplash.com/..."
-            value={formData.image}
-            onChange={handleChange}
-            leftIcon={<Image size={16} />}
-          />
+          {/* Device Photo Upload Section */}
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+              Product Photo (Upload from Device)
+            </label>
+
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              {/* Photo Preview */}
+              {formData.image ? (
+                <div style={{ position: 'relative', width: '90px', height: '90px', borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '2px solid var(--primary-500)', flexShrink: 0, boxShadow: 'var(--shadow-sm)' }}>
+                  <img
+                    src={formData.image}
+                    alt="Product preview"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData((prev) => ({ ...prev, image: '' }));
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '4px',
+                      background: 'rgba(0,0,0,0.7)',
+                      border: 'none',
+                      borderRadius: '50%',
+                      color: '#fff',
+                      width: '22px',
+                      height: '22px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                    }}
+                    title="Remove photo"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              ) : null}
+
+              {/* Upload Button */}
+              <div style={{ flex: 1, minWidth: '220px' }}>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.65rem',
+                    padding: '0.85rem 1.25rem',
+                    border: '2px dashed var(--border-medium)',
+                    borderRadius: 'var(--radius-lg)',
+                    cursor: 'pointer',
+                    background: 'var(--bg-tertiary)',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <Upload size={18} color="var(--primary-500)" />
+                  <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {imageUploading ? 'Processing photo...' : 'Choose Photo From My Device'}
+                  </span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handleImageFileChange}
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* URL input fallback */}
+            <div style={{ marginTop: '0.75rem' }}>
+              <Input
+                label="Or enter Image URL"
+                name="image"
+                placeholder="https://... or choose from your device above"
+                value={formData.image.startsWith('data:') ? '(Selected photo from device)' : formData.image}
+                onChange={(e) => {
+                  if (!e.target.value.startsWith('(Selected')) {
+                    handleChange(e);
+                  }
+                }}
+                leftIcon={<Image size={16} />}
+              />
+            </div>
+          </div>
 
           <Input
             type="textarea"
