@@ -156,13 +156,9 @@ export const WebsiteLayout = () => {
     setFormErrors({});
 
     try {
-      // Auto-register/authenticate if guest
+      // Auto-register/authenticate if guest in background (without blocking checkout)
       if (!isAuthenticated) {
-        try {
-          await register(checkoutForm.name, checkoutForm.email, 'warrior123');
-        } catch {
-          // If already exists or error, continue with guest order
-        }
+        register(checkoutForm.name, checkoutForm.email, 'warrior123', checkoutForm.phone).catch(() => {});
       }
 
       const fullAddress = `${checkoutForm.address}, ${checkoutForm.pincode}${

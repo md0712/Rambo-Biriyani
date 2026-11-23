@@ -145,7 +145,11 @@ export const UserDashboard = () => {
     };
 
     fetchUserOrders();
-    return () => { isMounted = false; };
+    window.addEventListener('rambo_orders_updated', fetchUserOrders);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('rambo_orders_updated', fetchUserOrders);
+    };
   }, [user, trackOrderId]);
 
   // Sync profile form when user updates
