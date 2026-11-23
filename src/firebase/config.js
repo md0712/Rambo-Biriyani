@@ -4,6 +4,7 @@ import { initializeFirestore, getFirestore, connectFirestoreEmulator } from 'fir
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import { getAnalytics, isSupported } from 'firebase/analytics';
+import { persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyCqObyKt6TbYcGhtqG-BwhnkLJT3yVM3Ak',
@@ -35,13 +36,19 @@ export const isFirebaseConfigured = () => {
 export const auth = getAuth(app);
 export const db = (() => {
   try {
+    // Enable robust offline persistence with multi‑tab support
     return initializeFirestore(app, {
       experimentalAutoDetectLongPolling: true,
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
     });
   } catch {
+    // Fallback to default Firestore if persistence setup fails
     return getFirestore(app);
   }
 })();
+
 export const storage = getStorage(app);
 export const functions = getFunctions(app);
 

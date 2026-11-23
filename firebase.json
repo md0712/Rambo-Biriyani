@@ -1,5 +1,7 @@
 {
   "firestore": {
+    "database": "(default)",
+    "location": "nam5",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
@@ -49,6 +51,15 @@
     "ui": {
       "enabled": true,
       "port": 4000
+    }
+  },
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "rambo-biriyani-654c6",
+        "supportEmail": "support@rambo-biriyani-654c6.firebaseapp.com"
+      }
     }
   }
 }

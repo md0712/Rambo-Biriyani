@@ -21,11 +21,6 @@ export const userService = {
       const usersRef = collection(db, 'users');
       let snapshot = await getDocs(usersRef);
 
-      if (snapshot.empty) {
-        await seedInitialFirestoreData();
-        snapshot = await getDocs(usersRef);
-      }
-
       let users = snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
         ...docSnap.data(),

@@ -1,28 +1,32 @@
-import React, { useState } from 'react';
-import { Download, Calendar, TrendingUp, DollarSign, Percent, BarChart2, PieChart } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Download, TrendingUp, DollarSign, Percent, BarChart2 } from 'lucide-react';
 import SEO from '../../../components/shared/SEO';
 import Button from '../../../components/common/Button';
 import StatCard from '../../components/StatCard';
+import orderService from '../../../services/orderService';
 import { formatCurrency } from '../../../utils/helpers';
+import { ORDER_STATUS } from '../../../utils/constants';
 
 export const Reports = () => {
   const [period, setPeriod] = useState('30d');
   const [exportNotice, setExportNotice] = useState(false);
+  const [orders, setOrders] = useState([]);
 
-  const categoryBreakdown = [
-    { name: 'Electronics', share: 44, amount: 24800, color: 'var(--primary-600)' },
-    { name: 'Accessories', share: 22, amount: 12400, color: 'var(--secondary-500)' },
-    { name: 'Fitness & Sports', share: 18, amount: 10100, color: 'var(--success)' },
-    { name: 'Home & Living', share: 11, amount: 6200, color: 'var(--warning)' },
-    { name: 'Software & Cloud', share: 5, amount: 2800, color: 'var(--info)' },
-  ];
+  useEffect(() => {
+    orderService.getAllOrders()
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setOrders(data);
+        }
+      })
+      .catch((err) => {
+        console.warn('[Reports] Orders fetch notice:', err.message);
+      });
+  }, []);
 
-  const monthlyGrowth = [
-    { month: 'November 2026', orders: 482, revenue: 56300, growth: '+14.2%' },
-    { month: 'October 2026', orders: 421, revenue: 49300, growth: '+9.8%' },
-    { month: 'September 2026', orders: 384, revenue: 44900, growth: '+12.1%' },
-    { month: 'August 2026', orders: 342, revenue: 40050, growth: '+6.4%' },
-  ];
+  const validOrders = orders.filter((o) => o.status !== ORDER_STATUS.CANCELLED);
+  const totalRevenue = validOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+  const aov = validOrders.length > 0 ? totalRevenue / validOrders.length : 0;
 
   const handleExport = () => {
     setExportNotice(true);
@@ -80,36 +84,36 @@ export const Reports = () => {
       <div className="stat-cards-grid">
         <StatCard
           title="Gross Merchandise Value"
-          value={formatCurrency(56300)}
-          trend="+14.2% vs previous period"
-          trendDirection="up"
+          value={formatCurrency(totalRevenue)}
+          trend={totalRevenue > 0 ? "+0.0% vs baseline" : "0.0% vs previous period"}
+          trendDirection={totalRevenue > 0 ? "up" : "neutral"}
           icon={<DollarSign size={20} />}
           iconBg="var(--primary-100)"
           iconColor="var(--primary-600)"
         />
         <StatCard
           title="Average Order Value (AOV)"
-          value={formatCurrency(116.8)}
-          trend="+5.4% expansion"
-          trendDirection="up"
+          value={formatCurrency(aov)}
+          trend={aov > 0 ? "+0.0% expansion" : "0.0% baseline"}
+          trendDirection={aov > 0 ? "up" : "neutral"}
           icon={<TrendingUp size={20} />}
           iconBg="var(--success-bg)"
           iconColor="var(--success)"
         />
         <StatCard
           title="Checkout Conversion Rate"
-          value="3.42%"
-          trend="+0.6% baseline"
-          trendDirection="up"
+          value="0.00%"
+          trend="0.0% baseline"
+          trendDirection="neutral"
           icon={<Percent size={20} />}
           iconBg="var(--secondary-100)"
           iconColor="var(--secondary-600)"
         />
         <StatCard
           title="Return Rate"
-          value="1.24%"
-          trend="-0.3% lower"
-          trendDirection="down"
+          value="0.00%"
+          trend="0.0% baseline"
+          trendDirection="neutral"
           icon={<BarChart2 size={20} />}
           iconBg="var(--info-bg)"
           iconColor="var(--info)"
@@ -123,18 +127,8 @@ export const Reports = () => {
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.25rem' }}>Revenue by Merchandise Category</h3>
           <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>Contribution percentage across top product groups</p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {categoryBreakdown.map((cat) => (
-              <div key={cat.name}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
-                  <span style={{ fontWeight: 600 }}>{cat.name}</span>
-                  <span style={{ fontWeight: 700 }}>{formatCurrency(cat.amount)} ({cat.share}%)</span>
-                </div>
-                <div style={{ width: '100%', height: '8px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
-                  <div style={{ width: `${cat.share}%`, height: '100%', background: cat.color, borderRadius: 'var(--radius-full)' }} />
-                </div>
-              </div>
-            ))}
+          <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            No sales data recorded across merchandise categories yet.
           </div>
         </div>
 
@@ -154,16 +148,11 @@ export const Reports = () => {
                 </tr>
               </thead>
               <tbody>
-                {monthlyGrowth.map((row) => (
-                  <tr key={row.month}>
-                    <td style={{ fontWeight: 600 }}>{row.month}</td>
-                    <td>{row.orders} orders</td>
-                    <td style={{ fontWeight: 700 }}>{formatCurrency(row.revenue)}</td>
-                    <td>
-                      <span className="badge badge-success">{row.growth}</span>
-                    </td>
-                  </tr>
-                ))}
+                <tr>
+                  <td colSpan="4" style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--text-muted)' }}>
+                    No monthly order data recorded yet
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>

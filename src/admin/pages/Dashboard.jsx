@@ -15,19 +15,19 @@ import orderService from '../../services/orderService';
 import productService from '../../services/productService';
 import userService from '../../services/userService';
 import { formatCurrency } from '../../utils/helpers';
-import { SEED_ORDERS, SEED_PRODUCTS } from '../../utils/constants';
+// Seed data removed for clean start
 
 export const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({
-    totalRevenue: 2725,
-    totalOrders: 5,
-    totalInventory: 920,
-    activeRiders: 12,
-    activeUsers: 8,
+    totalRevenue: 0,
+    totalOrders: 0,
+    totalInventory: 0,
+    activeRiders: 0,
+    activeUsers: 0,
   });
-  const [recentOrders, setRecentOrders] = useState(() => SEED_ORDERS.slice(0, 5));
-  const [topProducts, setTopProducts] = useState(() => SEED_PRODUCTS.slice(0, 3));
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [topProducts, setTopProducts] = useState([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -115,36 +115,36 @@ export const Dashboard = () => {
       <div className="stat-cards-grid">
         <StatCard
           title="Today's Biriyani Sales"
-          value={stats?.totalRevenue ? formatCurrency(stats.totalRevenue) : "₹2,725"}
-          trend="22.4% vs yesterday"
-          trendDirection="up"
+          value={formatCurrency(stats.totalRevenue || 0)}
+          trend={stats.totalRevenue ? "+22.4% vs yesterday" : "0.0% vs yesterday"}
+          trendDirection={stats.totalRevenue ? "up" : "neutral"}
           icon={<Flame size={20} />}
           iconBg="rgba(229, 30, 37, 0.08)"
           iconColor="#e51e25"
         />
         <StatCard
           title="Orders Processed"
-          value={stats?.totalOrders ? String(stats.totalOrders) : "5"}
-          trend="Peak lunch surge"
-          trendDirection="up"
+          value={String(stats?.totalOrders || 0)}
+          trend={stats?.totalOrders ? "Active orders" : "No orders yet"}
+          trendDirection={stats?.totalOrders ? "up" : "neutral"}
           icon={<ShoppingBag size={20} />}
           iconBg="rgba(245, 158, 11, 0.12)"
           iconColor="#d97706"
         />
         <StatCard
           title="Dum Portions Ready"
-          value={stats?.totalInventory ? String(stats.totalInventory) : "920"}
-          trend="Handi 3 & 4 Active"
-          trendDirection="up"
+          value={String(stats?.totalInventory || 0)}
+          trend={stats?.totalInventory ? "Handi active" : "0 portions ready"}
+          trendDirection={stats?.totalInventory ? "up" : "neutral"}
           icon={<Package size={20} />}
           iconBg="rgba(16, 185, 129, 0.12)"
           iconColor="#059669"
         />
         <StatCard
           title="Riders On Road"
-          value={stats?.activeRiders ? `${stats.activeRiders} Active` : "12 Active"}
-          trend="Avg 28 mins delivery"
-          trendDirection="up"
+          value={stats?.activeRiders ? `${stats.activeRiders} Active` : "0 Active"}
+          trend={stats?.activeRiders ? "Avg 28 mins delivery" : "0 Active riders"}
+          trendDirection={stats?.activeRiders ? "up" : "neutral"}
           icon={<Bike size={20} />}
           iconBg="rgba(14, 165, 233, 0.12)"
           iconColor="#0284c7"
@@ -174,40 +174,48 @@ export const Dashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {recentOrders.map((ord) => {
-                  const status = (ord.status || '').toLowerCase();
-                  const isDumGlow = status.includes('dum') || status.includes('prepar') || status.includes('placed') || status.includes('cook');
-                  const isDelivered = status.includes('deliver');
+                {recentOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--text-muted)' }}>
+                      No live kitchen orders found
+                    </td>
+                  </tr>
+                ) : (
+                  recentOrders.map((ord) => {
+                    const status = (ord.status || '').toLowerCase();
+                    const isDumGlow = status.includes('dum') || status.includes('prepar') || status.includes('placed') || status.includes('cook');
+                    const isDelivered = status.includes('deliver');
 
-                  return (
-                    <tr key={ord.id}>
-                      <td>
-                        <Link to={`/admin/orders/${ord.id}`} className="order-id-link">
-                          {ord.id}
-                        </Link>
-                      </td>
-                      <td>
-                        <div className="customer-name">{ord.customer}</div>
-                        <div className="customer-phone">{ord.customerPhone || ord.customerEmail}</div>
-                      </td>
-                      <td className="order-time">{ord.date}</td>
-                      <td className="order-amount">{formatCurrency(ord.total)}</td>
-                      <td>
-                        <span
-                          className={`status-pill ${
-                            isDumGlow
-                              ? 'status-pill-glow'
-                              : isDelivered
-                              ? 'status-pill-green'
-                              : 'status-pill-gray'
-                          }`}
-                        >
-                          {ord.status}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                    return (
+                      <tr key={ord.id}>
+                        <td>
+                          <Link to={`/admin/orders/${ord.id}`} className="order-id-link">
+                            {ord.id}
+                          </Link>
+                        </td>
+                        <td>
+                          <div className="customer-name">{ord.customer}</div>
+                          <div className="customer-phone">{ord.customerPhone || ord.customerEmail}</div>
+                        </td>
+                        <td className="order-time">{ord.date}</td>
+                        <td className="order-amount">{formatCurrency(ord.total)}</td>
+                        <td>
+                          <span
+                            className={`status-pill ${
+                              isDumGlow
+                                ? 'status-pill-glow'
+                                : isDelivered
+                                ? 'status-pill-green'
+                                : 'status-pill-gray'
+                            }`}
+                          >
+                            {ord.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -223,37 +231,43 @@ export const Dashboard = () => {
           </div>
 
           <div className="sku-list-body">
-            {topProducts.map((p) => {
-              const portionSubtitle =
-                p.portion && p.portion !== 'Serves 1-2'
-                  ? p.portion
-                  : p.name.toLowerCase().includes('kushka')
-                  ? 'without egg'
-                  : '1 Person';
+            {topProducts.length === 0 ? (
+              <div style={{ padding: '2.5rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                No menu items found in catalog
+              </div>
+            ) : (
+              topProducts.map((p) => {
+                const portionSubtitle =
+                  p.portion && p.portion !== 'Serves 1-2'
+                    ? p.portion
+                    : p.name.toLowerCase().includes('kushka')
+                    ? 'without egg'
+                    : '1 Person';
 
-              return (
-                <div key={p.id} className="sku-row-item">
-                  <img
-                    src={p.image}
-                    alt={p.name}
-                    className="sku-thumb-img"
-                  />
-                  <div className="sku-info-col">
-                    <div className="sku-portion-text">
-                      {portionSubtitle} • {p.stock} portions left
+                return (
+                  <div key={p.id} className="sku-row-item">
+                    <img
+                      src={p.image}
+                      alt={p.name}
+                      className="sku-thumb-img"
+                    />
+                    <div className="sku-info-col">
+                      <div className="sku-portion-text">
+                        {portionSubtitle} • {p.stock} portions left
+                      </div>
+                    </div>
+                    <div className="sku-meta-col">
+                      <div className="sku-price-text">
+                        {formatCurrency(p.price)}
+                      </div>
+                      <span className="sku-ready-badge">
+                        READY DUM
+                      </span>
                     </div>
                   </div>
-                  <div className="sku-meta-col">
-                    <div className="sku-price-text">
-                      {formatCurrency(p.price)}
-                    </div>
-                    <span className="sku-ready-badge">
-                      READY DUM
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
       </div>

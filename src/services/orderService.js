@@ -67,11 +67,6 @@ export const orderService = {
       const ordersRef = collection(db, 'orders');
       let snapshot = await getDocs(ordersRef);
 
-      if (snapshot.empty) {
-        await seedInitialFirestoreData();
-        snapshot = await getDocs(ordersRef);
-      }
-
       let orders = snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
         ...docSnap.data(),
@@ -311,18 +306,18 @@ export const orderService = {
         totalOrders: orders.length,
         pendingOrders,
         completedOrders,
-        totalInventory: 920,
-        activeRiders: 12,
+        totalInventory: 0,
+        activeRiders: 0,
       };
     } catch (error) {
-      console.error('[Firestore getDashboardStats Error]', error);
+      console.warn('[Firestore getDashboardStats Notice]', error.message);
       return {
-        totalRevenue: 2725,
-        totalOrders: 5,
-        pendingOrders: 2,
-        completedOrders: 3,
-        totalInventory: 920,
-        activeRiders: 12,
+        totalRevenue: 0,
+        totalOrders: 0,
+        pendingOrders: 0,
+        completedOrders: 0,
+        totalInventory: 0,
+        activeRiders: 0,
       };
     }
   },

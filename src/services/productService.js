@@ -56,12 +56,6 @@ export const productService = {
       const productsRef = collection(db, 'products');
       let snapshot = await getDocs(productsRef);
 
-      // If Firestore database is brand new, auto-seed with official Rambo items
-      if (snapshot.empty) {
-        await seedInitialFirestoreData();
-        snapshot = await getDocs(productsRef);
-      }
-
       let products = snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
         ...docSnap.data(),
@@ -212,15 +206,6 @@ export const productService = {
     try {
       const categoriesRef = collection(db, 'categories');
       const snapshot = await getDocs(categoriesRef);
-
-      if (snapshot.empty) {
-        await seedInitialFirestoreData();
-        const freshSnap = await getDocs(categoriesRef);
-        return freshSnap.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...docSnap.data(),
-        }));
-      }
 
       return snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
