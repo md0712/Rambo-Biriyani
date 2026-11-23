@@ -24,6 +24,7 @@ export const Settings = () => {
   });
 
   const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isPurging, setIsPurging] = useState(false);
   const [purgeStatus, setPurgeStatus] = useState(null);
@@ -31,14 +32,32 @@ export const Settings = () => {
   const apiKey = 'rmb_live_948f21e09c8491823abf89';
 
   useEffect(() => {
+    // 1. Immediately read cached settings from localStorage for instant display
+    try {
+      const cached = localStorage.getItem('rambo_outlet_settings');
+      if (cached) {
+        setFormData((prev) => ({ ...prev, ...JSON.parse(cached) }));
+      }
+    } catch (e) {
+      console.warn('[Settings] LocalStorage load notice:', e);
+    }
+
+    // 2. Fetch latest settings from Firestore with a 2.5s timeout safeguard
     const loadSettings = async () => {
       try {
-        const snap = await getDoc(doc(db, 'settings', 'outlet'));
-        if (snap.exists()) {
-          setFormData((prev) => ({ ...prev, ...snap.data() }));
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Firestore settings load timeout')), 2500)
+        );
+        const fetchPromise = getDoc(doc(db, 'settings', 'outlet'));
+        const snap = await Promise.race([fetchPromise, timeoutPromise]);
+
+        if (snap && snap.exists()) {
+          const cloudData = snap.data();
+          setFormData((prev) => ({ ...prev, ...cloudData }));
+          localStorage.setItem('rambo_outlet_settings', JSON.stringify(cloudData));
         }
       } catch (err) {
-        console.warn('[Settings] Error loading outlet settings from Firestore:', err);
+        console.warn('[Settings] Notice loading cloud settings:', err.message);
       }
     };
     loadSettings();
@@ -51,15 +70,37 @@ export const Settings = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    setIsSaving(true);
+
+    // 1. Instantly save to localStorage so settings are never lost
     try {
-      await setDoc(doc(db, 'settings', 'outlet'), {
-        ...formData,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
+      localStorage.setItem('rambo_outlet_settings', JSON.stringify(formData));
+      window.dispatchEvent(new Event('rambo_settings_updated'));
+    } catch (localErr) {
+      console.warn('[Settings] LocalStorage save notice:', localErr);
+    }
+
+    // 2. Persist to Firestore with timeout safeguard
+    try {
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Firestore save timeout')), 3000)
+      );
+      const savePromise = setDoc(
+        doc(db, 'settings', 'outlet'),
+        {
+          ...formData,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      await Promise.race([savePromise, timeoutPromise]);
     } catch (err) {
-      console.error('[Settings] Error saving settings to Firestore:', err);
+      console.warn('[Settings] Cloud sync notice (saved locally):', err.message);
+    } finally {
+      setIsSaving(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
     }
   };
 
@@ -309,7 +350,7 @@ export const Settings = () => {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Button type="submit" variant="primary" size="lg" leftIcon={<Save size={18} />}>
+          <Button type="submit" variant="primary" size="lg" isLoading={isSaving} leftIcon={<Save size={18} />}>
             Save Kitchen Settings
           </Button>
         </div>
