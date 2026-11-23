@@ -41,6 +41,25 @@ const saveLocalProducts = (products) => {
   }
 };
 
+// Local storage caching for categories
+const getLocalCategories = () => {
+  try {
+    const raw = localStorage.getItem('rambo_categories');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveLocalCategories = (categories) => {
+  try {
+    localStorage.setItem('rambo_categories', JSON.stringify(categories));
+    window.dispatchEvent(new Event('rambo_categories_updated'));
+  } catch (e) {
+    console.warn('[LocalStorage] Categories save warning:', e);
+  }
+};
+
 export const productService = {
   /**
    * Real-time listener for products collection with immediate local cache response
@@ -272,20 +291,23 @@ export const productService = {
    * Fetch all categories
    */
   async getCategories() {
+    let local = getLocalCategories();
     try {
       const categoriesRef = collection(db, 'categories');
       const snapshot = await withTimeout(getDocs(categoriesRef), 2500);
 
       if (!snapshot.empty) {
-        return snapshot.docs.map((docSnap) => ({
+        const cloudCats = snapshot.docs.map((docSnap) => ({
           id: docSnap.id,
           ...docSnap.data(),
         }));
+        saveLocalCategories(cloudCats);
+        return cloudCats;
       }
-      return SEED_CATEGORIES;
+      return local;
     } catch (error) {
-      console.warn('[Firestore getCategories Notice] Falling back to categories:', error.message);
-      return SEED_CATEGORIES;
+      console.warn('[Firestore getCategories Notice] Returning local categories:', error.message);
+      return local;
     }
   },
 
@@ -293,34 +315,51 @@ export const productService = {
    * Create a new category
    */
   async createCategory(catData) {
+    const catId = (catData.name || 'category').toLowerCase().trim().replace(/\s+/g, '-');
+    const payload = {
+      id: catId,
+      name: catData.name.trim(),
+      description: catData.description || '',
+      slug: catId,
+      productsCount: 0,
+      createdAt: new Date().toISOString(),
+    };
+
+    const existing = getLocalCategories();
+    const updated = [...existing.filter((c) => c.id !== catId), payload];
+    saveLocalCategories(updated);
+
     try {
-      const catId = (catData.name || 'category').toLowerCase().replace(/\s+/g, '-');
       const docRef = doc(db, 'categories', catId);
-      const payload = {
-        id: catId,
-        name: catData.name,
-        description: catData.description || '',
-        createdAt: serverTimestamp(),
-      };
-      await withTimeout(setDoc(docRef, payload), 3000);
-      return payload;
+      await withTimeout(
+        setDoc(docRef, {
+          ...payload,
+          createdAt: serverTimestamp(),
+        }),
+        3000
+      );
     } catch (error) {
-      console.error('[Firestore createCategory Error]', error);
-      throw error;
+      console.warn('[Firestore createCategory Notice] Saved locally:', error.message);
     }
+
+    return payload;
   },
 
   /**
    * Delete a category
    */
   async deleteCategory(id) {
+    const existing = getLocalCategories();
+    const filtered = existing.filter((c) => c.id !== id);
+    saveLocalCategories(filtered);
+
     try {
       await withTimeout(deleteDoc(doc(db, 'categories', id)), 3000);
-      return true;
     } catch (error) {
-      console.error(`[Firestore deleteCategory ${id} Error]`, error);
-      throw error;
+      console.warn(`[Firestore deleteCategory ${id} Notice] Removed locally:`, error.message);
     }
+
+    return true;
   },
 };
 

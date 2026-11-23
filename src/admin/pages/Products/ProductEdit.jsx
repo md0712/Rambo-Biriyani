@@ -7,7 +7,6 @@ import Input from '../../../components/common/Input';
 import Loader from '../../../components/common/Loader';
 import productService from '../../../services/productService';
 import storageService from '../../../services/storageService';
-import { PRODUCT_CATEGORIES } from '../../../utils/constants';
 import { compressImage } from '../../../utils/helpers';
 
 export const ProductEdit = () => {
@@ -25,24 +24,32 @@ export const ProductEdit = () => {
     image: '',
     description: '',
   });
+
+  const [categories, setCategories] = useState([]);
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    productService
-      .getProductById(id)
-      .then((data) => {
+    Promise.all([
+      productService.getProductById(id),
+      productService.getCategories(),
+    ])
+      .then(([productData, cats]) => {
+        if (Array.isArray(cats)) {
+          setCategories(cats);
+        }
         setFormData({
-          name: data.name,
-          sku: data.sku,
-          category: data.category,
-          price: data.price,
-          originalPrice: data.originalPrice || '',
-          stock: data.stock,
-          image: data.image || '',
-          description: data.description || '',
+          name: productData.name,
+          sku: productData.sku,
+          category: productData.category || '',
+          price: productData.price,
+          originalPrice: productData.originalPrice || '',
+          stock: productData.stock,
+          image: productData.image || '',
+          description: productData.description || '',
         });
         setLoading(false);
       })
@@ -140,14 +147,46 @@ export const ProductEdit = () => {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-            <Input
-              type="select"
-              label="Category"
-              name="category"
-              value={formData.category}
-              onChange={handleChange}
-              options={PRODUCT_CATEGORIES.map((c) => ({ value: c, label: c }))}
-            />
+            {categories.length > 0 && !isCustomCategory ? (
+              <Input
+                type="select"
+                label="Category"
+                name="category"
+                value={formData.category}
+                onChange={(e) => {
+                  if (e.target.value === '__NEW__') {
+                    setIsCustomCategory(true);
+                  } else {
+                    handleChange(e);
+                  }
+                }}
+                options={[
+                  ...categories.map((c) => ({ value: c.name, label: c.name })),
+                  { value: '__NEW__', label: '+ Type custom category...' },
+                ]}
+              />
+            ) : (
+              <Input
+                label="Category"
+                name="category"
+                placeholder="e.g. Biriyanis"
+                required
+                value={formData.category}
+                onChange={handleChange}
+                helperText={
+                  categories.length > 0 ? (
+                    <span
+                      style={{ color: 'var(--primary-600)', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.75rem' }}
+                      onClick={() => setIsCustomCategory(false)}
+                    >
+                      Choose existing category
+                    </span>
+                  ) : (
+                    'Type category name for this product'
+                  )
+                }
+              />
+            )}
 
             <Input
               label="Price (₹)"

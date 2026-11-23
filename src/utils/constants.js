@@ -26,13 +26,7 @@ export const ORDER_STATUS = {
   CANCELLED: 'Cancelled',
 };
 
-export const PRODUCT_CATEGORIES = [
-  'Biriyanis',
-  'Add Ons',
-  'Combos',
-  'Beverages',
-  'Desserts',
-];
+export const PRODUCT_CATEGORIES = [];
 
 export const STORAGE_KEYS = {
   AUTH_USER: 'rambo_auth_user',

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Save, Package, Image, Hash, Upload, X } from 'lucide-react';
 import SEO from '../../../components/shared/SEO';
@@ -6,7 +6,6 @@ import Button from '../../../components/common/Button';
 import Input from '../../../components/common/Input';
 import productService from '../../../services/productService';
 import storageService from '../../../services/storageService';
-import { PRODUCT_CATEGORIES } from '../../../utils/constants';
 import { validateRequired, validateNumber } from '../../../utils/validators';
 import { compressImage } from '../../../utils/helpers';
 
@@ -17,7 +16,7 @@ export const ProductCreate = () => {
   const [formData, setFormData] = useState({
     name: '',
     sku: `RMB-PRD-${Math.floor(100 + Math.random() * 900)}`,
-    category: PRODUCT_CATEGORIES[0] || 'Biriyanis',
+    category: '',
     price: '',
     originalPrice: '',
     stock: '',
@@ -26,10 +25,27 @@ export const ProductCreate = () => {
     featured: false,
   });
 
+  const [categories, setCategories] = useState([]);
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [submitError, setSubmitError] = useState('');
+
+  useEffect(() => {
+    productService.getCategories().then((cats) => {
+      if (Array.isArray(cats) && cats.length > 0) {
+        setCategories(cats);
+        setFormData((prev) => ({
+          ...prev,
+          category: prev.category || cats[0].name,
+        }));
+        setIsCustomCategory(false);
+      } else {
+        setIsCustomCategory(true);
+      }
+    });
+  }, []);
 
   const handleChange = (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -45,11 +61,9 @@ export const ProductCreate = () => {
 
     setImageUploading(true);
     try {
-      // 1. Immediately read and compress photo from local device
       const compressedDataUrl = await compressImage(file, 800, 0.82);
       setFormData((prev) => ({ ...prev, image: compressedDataUrl }));
 
-      // 2. Background upload to Firebase Storage if available
       storageService
         .uploadImage(file, 'products')
         .then((downloadUrl) => {
@@ -58,7 +72,7 @@ export const ProductCreate = () => {
           }
         })
         .catch((err) => {
-          console.warn('[Firebase Storage upload Notice] Retaining local device image:', err.message);
+          console.warn('[Firebase Storage upload Notice]', err.message);
         });
     } catch (err) {
       console.error('[Device Photo Error]', err);
@@ -79,6 +93,9 @@ export const ProductCreate = () => {
     const skuErr = validateRequired(formData.sku, 'Product SKU');
     if (skuErr) newErrors.sku = skuErr;
 
+    const catErr = validateRequired(formData.category, 'Category');
+    if (catErr) newErrors.category = catErr;
+
     const priceErr = validateNumber(formData.price, 'Price', 0.01);
     if (priceErr) newErrors.price = priceErr;
 
@@ -95,8 +112,19 @@ export const ProductCreate = () => {
       const finalImage = formData.image || 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600';
       await productService.createProduct({
         ...formData,
+        category: formData.category.trim(),
         image: finalImage,
       });
+
+      // Auto-register category if not in list
+      if (formData.category.trim()) {
+        const catName = formData.category.trim();
+        const exists = categories.some((c) => c.name.toLowerCase() === catName.toLowerCase());
+        if (!exists) {
+          productService.createCategory({ name: catName }).catch(() => {});
+        }
+      }
+
       navigate('/admin/products');
     } catch (err) {
       console.error('[ProductCreate Submit Error]', err);
@@ -151,14 +179,50 @@ export const ProductCreate = () => {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-            <Input
-              type="select"
-              label="Category"
-              name="category"
-              value={formData.category}
-              onChange={handleChange}
-              options={PRODUCT_CATEGORIES.map((c) => ({ value: c, label: c }))}
-            />
+            {/* Dynamic Category Selector or Custom Category Input */}
+            {categories.length > 0 && !isCustomCategory ? (
+              <Input
+                type="select"
+                label="Category"
+                name="category"
+                value={formData.category}
+                onChange={(e) => {
+                  if (e.target.value === '__NEW__') {
+                    setIsCustomCategory(true);
+                    setFormData((prev) => ({ ...prev, category: '' }));
+                  } else {
+                    handleChange(e);
+                  }
+                }}
+                error={errors.category}
+                options={[
+                  ...categories.map((c) => ({ value: c.name, label: c.name })),
+                  { value: '__NEW__', label: '+ Type custom category...' },
+                ]}
+              />
+            ) : (
+              <Input
+                label="Category"
+                name="category"
+                placeholder="e.g. Biriyanis"
+                required
+                value={formData.category}
+                onChange={handleChange}
+                error={errors.category}
+                helperText={
+                  categories.length > 0 ? (
+                    <span
+                      style={{ color: 'var(--primary-600)', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.75rem' }}
+                      onClick={() => setIsCustomCategory(false)}
+                    >
+                      Choose existing category
+                    </span>
+                  ) : (
+                    'Type category name for this product'
+                  )
+                }
+              />
+            )}
 
             <Input
               label="Selling Price (₹)"
@@ -204,7 +268,6 @@ export const ProductCreate = () => {
             </label>
 
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              {/* Photo Preview */}
               {formData.image ? (
                 <div style={{ position: 'relative', width: '90px', height: '90px', borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '2px solid var(--primary-500)', flexShrink: 0, boxShadow: 'var(--shadow-sm)' }}>
                   <img
@@ -240,7 +303,6 @@ export const ProductCreate = () => {
                 </div>
               ) : null}
 
-              {/* Upload Button */}
               <div style={{ flex: 1, minWidth: '220px' }}>
                 <label
                   style={{
@@ -271,7 +333,6 @@ export const ProductCreate = () => {
               </div>
             </div>
 
-            {/* URL input fallback */}
             <div style={{ marginTop: '0.75rem' }}>
               <Input
                 label="Or enter Image URL"
