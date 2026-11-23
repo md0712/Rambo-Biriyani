@@ -108,16 +108,16 @@ export const ProductDetail = () => {
     product.name.toLowerCase().includes('jamun') ||
     product.name.toLowerCase().includes('payasam');
 
-  const gallery = [
-    product.image || 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600',
-    'https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=600',
-    'https://images.unsplash.com/photo-1633945274405-b6c8069047b0?w=600',
-    'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=600',
-    'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600',
-  ];
+  const gallery = Array.isArray(product.images) && product.images.length > 0
+    ? product.images
+    : product.image
+    ? [product.image]
+    : ['https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600'];
 
   // Portions with clear serving sizes
   const getPacks = () => {
+    const mainImg = product.image || gallery[0];
+
     if (category === 'Biriyanis') {
       return [
         {
@@ -127,7 +127,7 @@ export const ProductDetail = () => {
           price: basePrice,
           mrp: Math.round(basePrice * 1.2),
           discount: 17,
-          image: gallery[0],
+          image: mainImg,
         },
         {
           id: 'pack-half',
@@ -136,7 +136,7 @@ export const ProductDetail = () => {
           price: Math.round(basePrice * 0.6),
           mrp: Math.round(basePrice * 0.75),
           discount: 20,
-          image: gallery[1] || gallery[0],
+          image: mainImg,
         },
         {
           id: 'pack-family',
@@ -145,7 +145,7 @@ export const ProductDetail = () => {
           price: Math.round(basePrice * 2.0),
           mrp: Math.round(basePrice * 2.4),
           discount: 17,
-          image: gallery[2] || gallery[0],
+          image: mainImg,
         },
       ];
     }
@@ -159,7 +159,7 @@ export const ProductDetail = () => {
           price: basePrice,
           mrp: Math.round(basePrice * 1.2),
           discount: 17,
-          image: gallery[0],
+          image: mainImg,
         },
         {
           id: 'pack-large',
@@ -168,7 +168,7 @@ export const ProductDetail = () => {
           price: Math.round(basePrice * 1.8),
           mrp: Math.round(basePrice * 2.2),
           discount: 18,
-          image: gallery[1] || gallery[0],
+          image: mainImg,
         },
       ];
     }
@@ -182,7 +182,7 @@ export const ProductDetail = () => {
           price: basePrice,
           mrp: Math.round(basePrice * 1.2),
           discount: 17,
-          image: gallery[0],
+          image: mainImg,
         },
         {
           id: 'pack-double',
@@ -191,7 +191,7 @@ export const ProductDetail = () => {
           price: Math.round(basePrice * 1.8),
           mrp: Math.round(basePrice * 2.2),
           discount: 18,
-          image: gallery[1] || gallery[0],
+          image: mainImg,
         },
       ];
     }
@@ -205,7 +205,7 @@ export const ProductDetail = () => {
         price: basePrice,
         mrp: Math.round(basePrice * 1.2),
         discount: 17,
-        image: gallery[0],
+        image: mainImg,
       },
       {
         id: 'pack-half',
@@ -214,7 +214,7 @@ export const ProductDetail = () => {
         price: Math.round(basePrice * 0.6),
         mrp: Math.round(basePrice * 0.75),
         discount: 20,
-        image: gallery[1] || gallery[0],
+        image: mainImg,
       },
       {
         id: 'pack-family',
@@ -223,7 +223,7 @@ export const ProductDetail = () => {
         price: Math.round(basePrice * 2.0),
         mrp: Math.round(basePrice * 2.4),
         discount: 17,
-        image: gallery[2] || gallery[0],
+        image: mainImg,
       },
     ];
   };
@@ -368,37 +368,41 @@ export const ProductDetail = () => {
                   />
                 </div>
 
-                {/* Dot Pagination Indicator at Bottom */}
-                <div className="hero-dots-indicator">
-                  {gallery.map((_, idx) => (
-                    <span
-                      key={idx}
-                      className={`dot-pill ${safeActiveIndex === idx ? 'dot-active' : ''}`}
-                      onClick={() => setSelectedImage(gallery[idx])}
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`View image ${idx + 1}`}
-                    />
-                  ))}
-                </div>
+                {/* Dot Pagination Indicator at Bottom (only if multiple images exist) */}
+                {gallery.length > 1 && (
+                  <div className="hero-dots-indicator">
+                    {gallery.map((_, idx) => (
+                      <span
+                        key={idx}
+                        className={`dot-pill ${safeActiveIndex === idx ? 'dot-active' : ''}`}
+                        onClick={() => setSelectedImage(gallery[idx])}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`View image ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* Product Thumbnails horizontally below main image */}
-              <div className="thumbnails-wrapper">
-                <div className="thumbnails-scroll-row">
-                  {gallery.map((img, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setSelectedImage(img)}
-                      className={`thumb-btn ${selectedImage === img ? 'thumb-active' : ''}`}
-                      aria-label={`Thumbnail ${idx + 1}`}
-                    >
-                      <img src={img} alt={`Thumbnail ${idx + 1}`} loading="lazy" />
-                    </button>
-                  ))}
+              {/* Product Thumbnails horizontally below main image (only if multiple images exist) */}
+              {gallery.length > 1 && (
+                <div className="thumbnails-wrapper">
+                  <div className="thumbnails-scroll-row">
+                    {gallery.map((img, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setSelectedImage(img)}
+                        className={`thumb-btn ${selectedImage === img ? 'thumb-active' : ''}`}
+                        aria-label={`Thumbnail ${idx + 1}`}
+                      >
+                        <img src={img} alt={`Thumbnail ${idx + 1}`} loading="lazy" />
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* PRODUCT INFORMATION */}

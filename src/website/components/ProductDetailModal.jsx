@@ -122,13 +122,11 @@ export const ProductDetailModal = ({
   const packOptions = getPacksForProduct();
   const activePack = packOptions[selectedPackIndex] || packOptions[0];
 
-  const gallery = [
-    product?.image || 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600',
-    'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600',
-    'https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=600',
-    'https://images.unsplash.com/photo-1633945274405-b6c8069047b0?w=600',
-    'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=600',
-  ];
+  const gallery = Array.isArray(product?.images) && product.images.length > 0
+    ? product.images
+    : product?.image
+    ? [product.image]
+    : ['https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600'];
 
   useEffect(() => {
     if (product) {
@@ -292,32 +290,34 @@ export const ProductDetailModal = ({
         <div className="bb-modal-grid" style={{ padding: '28px', display: 'grid', gridTemplateColumns: '1.05fr 1fr', gap: '36px' }}>
           {/* Left Column: Vertical Thumbnails + Main Image with Veg Icon */}
           <div style={{ display: 'flex', gap: '16px' }}>
-            {/* Vertical Thumbnail Strip */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {gallery.map((img, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => setSelectedImage(img)}
-                  style={{
-                    width: '60px',
-                    height: '60px',
-                    borderRadius: '6px',
-                    border: selectedImage === img ? '2px solid var(--rambo-red)' : '1px solid rgba(255, 255, 255, 0.1)',
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    padding: '2px',
-                    backgroundColor: '#18100f',
-                    transition: 'border-color 0.15s ease',
-                  }}
-                >
-                  <img
-                    src={img}
-                    alt={`Thumbnail ${idx + 1}`}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px' }}
-                  />
-                </div>
-              ))}
-            </div>
+            {/* Vertical Thumbnail Strip (only if multiple images exist) */}
+            {gallery.length > 1 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {gallery.map((img, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => setSelectedImage(img)}
+                    style={{
+                      width: '60px',
+                      height: '60px',
+                      borderRadius: '6px',
+                      border: selectedImage === img ? '2px solid var(--rambo-red)' : '1px solid rgba(255, 255, 255, 0.1)',
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      padding: '2px',
+                      backgroundColor: '#18100f',
+                      transition: 'border-color 0.15s ease',
+                    }}
+                  >
+                    <img
+                      src={img}
+                      alt={`Thumbnail ${idx + 1}`}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px' }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Main Image Box */}
             <div
